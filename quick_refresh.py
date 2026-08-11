@@ -6,9 +6,10 @@
 """
 import json, os, subprocess, sys, time, urllib.request
 
-BASE = r"C:\Users\ASUS\WorkBuddy\2026-08-03-11-17-59"
+# 路径自适应：Windows使用本地路径，GitHub Actions使用当前目录
+BASE = os.path.dirname(os.path.abspath(__file__))
 DATA = os.path.join(BASE, "data")
-PY = r"C:\Users\ASUS\.workbuddy\binaries\python\versions\3.13.12\python.exe"
+PY = sys.executable  # 使用当前Python解释器（Windows/GitHub Actions通用）
 STATUS = os.path.join(DATA, "refresh_status.json")
 
 def set_status(step, state="running", msg=""):
