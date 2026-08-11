@@ -1,0 +1,27 @@
+name: auto-refresh
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '30 3 * * 1-5'
+    - cron: '0 7 * * 1-5'
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+      pages: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Run pipeline
+        run: python quick_refresh.py
+      - name: Deploy
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./deploy_dist
