@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 """从东方财富拉取日K线数据，保存到 data/ 目录"""
+import os, sys
 import json, os, urllib.request
 
-DATA_DIR = r"C:\Users\ASUS\WorkBuddy\2026-08-03-11-17-59\data"
+DATA_DIR = r"os.path.dirname(os.path.abspath(__file__))\data"
 os.makedirs(DATA_DIR, exist_ok=True)
 
 targets = {

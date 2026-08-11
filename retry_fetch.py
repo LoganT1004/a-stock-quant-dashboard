@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 """多域名轮询重试拉取缺失的K线数据"""
+import os, sys
 import json, urllib.request, time, os, random, sys
 
-DATA_DIR = r"C:\Users\ASUS\WorkBuddy\2026-08-03-11-17-59\data"
+DATA_DIR = r"os.path.dirname(os.path.abspath(__file__))\data"
 hosts = ["push2his.eastmoney.com", "3.push2his.eastmoney.com", "13.push2his.eastmoney.com",
          "28.push2his.eastmoney.com", "50.push2his.eastmoney.com", "63.push2his.eastmoney.com",
          "84.push2his.eastmoney.com", "1.push2his.eastmoney.com", "7.push2his.eastmoney.com"]

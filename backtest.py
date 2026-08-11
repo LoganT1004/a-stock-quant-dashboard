@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 """九转信号回测：验证科创50(3/23低9,6/25高9)与纳指100(3/20低9,6/3高9)的信号有效性"""
+import os, sys
 import json, os
 
-DATA = r"C:\Users\ASUS\WorkBuddy\2026-08-03-11-17-59\data"
+DATA = r"os.path.dirname(os.path.abspath(__file__))\data"
 
 def load_tx(name, key):
     with open(os.path.join(DATA, name), encoding="utf-8") as f:

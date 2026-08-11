@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 """东财数据多域名轮询采集（应对本机 push2 系列偶发断连）"""
+import os, sys
 import urllib.request, json, os, time
 
-DATA = r"C:\Users\ASUS\WorkBuddy\2026-08-03-11-17-59\data"
+DATA = r"os.path.dirname(os.path.abspath(__file__))\data"
 HOSTS_HIS = ["push2his", "1.push2his", "3.push2his", "13.push2his", "17.push2his", "61.push2his", "71.push2his"]
 HOSTS_RT = ["push2", "1.push2", "3.push2", "13.push2", "17.push2"]
 

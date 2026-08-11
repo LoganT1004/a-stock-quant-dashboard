@@ -16,10 +16,11 @@
 口径：赛道日涨跌幅=东财ETF净值增长率（159516/159995/515880）；均线/周线=ETF净值序列；
      量比=成分股合计成交量（track_indexes.json）；宽基=腾讯K线。
 """
+import os, sys
 import json, os
 from datetime import datetime
 
-BASE = r"C:\Users\ASUS\WorkBuddy\2026-08-03-11-17-59"
+BASE = os.path.dirname(os.path.abspath(__file__))
 DATA = os.path.join(BASE, "data")
 
 def load(fn):

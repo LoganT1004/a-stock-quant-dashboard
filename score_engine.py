@@ -8,10 +8,11 @@
 额外加减分：直接作用于总分
 输出：score_result.json（含打分明细+快照序列）
 """
+import os, sys
 import json, os, re
 from datetime import datetime, timedelta
 
-BASE = r"C:\Users\ASUS\WorkBuddy\2026-08-03-11-17-59"
+BASE = os.path.dirname(os.path.abspath(__file__))
 DATA = os.path.join(BASE, "data")
 STOCKS = os.path.join(DATA, "stocks")
 

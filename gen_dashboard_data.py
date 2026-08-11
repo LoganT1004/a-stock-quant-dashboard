@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
 """看板数据管道 v2：东方财富统一数据源，一年K线窗口，多均线，自动信号，个股行情，回测嵌入"""
-import json, os, re
+import os, sys
+import json, re
 from datetime import datetime
 
-BASE = r"C:\Users\ASUS\WorkBuddy\2026-08-03-11-17-59"
+BASE = os.path.dirname(os.path.abspath(__file__))
 DATA = os.path.join(BASE, "data")
 OUT = os.path.join(BASE, "dashboard")
 WINDOW = 250

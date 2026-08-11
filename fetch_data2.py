@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 """拉取日K线：腾讯ifzq(A股/纳指) + 新浪(SOX/DXY/VXN)，统一转为东财格式存入 data/"""
+import os, sys
 import json, os, urllib.request
 
-DATA_DIR = r"C:\Users\ASUS\WorkBuddy\2026-08-03-11-17-59\data"
+DATA_DIR = r"os.path.dirname(os.path.abspath(__file__))\data"
 os.makedirs(DATA_DIR, exist_ok=True)
 UA = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)", "Referer": "https://finance.sina.com.cn"}
 

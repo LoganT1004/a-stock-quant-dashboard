@@ -4,10 +4,11 @@
 - 无新触发但冷却期内有近期触发 → 「风控执行中/冷却观察期」结论（结合执行确认状态）
 - 执行确认（risk_ack.json）齐全 → 「已执行·冷却观察」，不再催促减仓
 """
+import os, sys
 import json, os
 from datetime import datetime
 
-BASE = r"C:\Users\ASUS\WorkBuddy\2026-08-03-11-17-59"
+BASE = os.path.dirname(os.path.abspath(__file__))
 DATA = os.path.join(BASE, "data")
 COLLAB = os.path.join(BASE, "dashboard", "collab_data")
 

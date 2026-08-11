@@ -9,10 +9,11 @@
 - 所有外部抓取失败都 graceful fallback，不报错
 - 公司实时数据用 sina secid（最稳）；ulist.np 数据用 sina 数据二次校准
 """
+import os, sys
 import json, os, re, time, urllib.request, ssl
 from datetime import datetime
 
-BASE = r"C:\Users\ASUS\WorkBuddy\2026-08-03-11-17-59"
+BASE = os.path.dirname(os.path.abspath(__file__))
 DATA = os.path.join(BASE, "data")
 
 UA = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",

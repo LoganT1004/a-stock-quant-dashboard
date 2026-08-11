@@ -11,10 +11,11 @@
 五、强制风控 > 预警 > 正式趋势 > 打分微调 > 差额调仓
 六、打分体系、仓位映射表、差额调仓、T+1执行、冷却期、初始对齐全部沿用
 """
+import os, sys
 import json, os, time, math
 from datetime import datetime, timedelta
 
-BASE = r"C:\Users\ASUS\WorkBuddy\2026-08-03-11-17-59"
+BASE = os.path.dirname(os.path.abspath(__file__))
 DATA = os.path.join(BASE, "data")
 
 # ---------------- 仓位映射表（打分区间 × 趋势状态，单位：成） ----------------

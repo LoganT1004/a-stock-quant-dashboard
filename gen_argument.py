@@ -3,9 +3,10 @@
 根据风控状态（fire/pending/acked/none）+ 评分 + 资金流 + 消息面 + 解禁数据，
 生成7条排序理由（权重/立场/计算公式），写入 payload_hand.json 的 argument 字段。
 每日4次管道运行时自动刷新，不再有静态旧内容。"""
+import os, sys
 import json, os
 
-BASE = r"C:\Users\ASUS\WorkBuddy\2026-08-03-11-17-59"
+BASE = os.path.dirname(os.path.abspath(__file__))
 DATA = os.path.join(BASE, "data")
 
 def load(fn, base=DATA):

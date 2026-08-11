@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 """按东方财富官方规则计算神奇九转 + MACD背离 + MA5确认状态"""
+import os, sys
 import json, os
 
-DATA_DIR = r"C:\Users\ASUS\WorkBuddy\2026-08-03-11-17-59\data"
+DATA_DIR = r"os.path.dirname(os.path.abspath(__file__))\data"
 
 def load(name):
     path = os.path.join(DATA_DIR, name + ".json")

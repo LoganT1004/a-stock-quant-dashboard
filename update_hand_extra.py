@@ -4,10 +4,11 @@
 - 北向成交额从 northbound_history.json 动态取最新
 - 公司BI资金流向合并
 - 数据来源库维护"""
+import os, sys
 import json, os
 from datetime import datetime
 
-BASE = r"C:\Users\ASUS\WorkBuddy\2026-08-03-11-17-59"
+BASE = os.path.dirname(os.path.abspath(__file__))
 DATA = os.path.join(BASE, "data")
 hand = json.load(open(os.path.join(BASE, "payload_hand.json"), encoding="utf-8"))
 

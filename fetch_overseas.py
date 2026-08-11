@@ -10,10 +10,11 @@
 
 注意：sina secid 里的 `$` 在 URL 中需要 URL 编码为 %24，否则部分环境下会被 shell 吞掉
 """
+import os, sys
 import json, os, re, time, urllib.request, ssl
 from datetime import datetime, timedelta
 
-BASE = r"C:\Users\ASUS\WorkBuddy\2026-08-03-11-17-59"
+BASE = os.path.dirname(os.path.abspath(__file__))
 DATA = os.path.join(BASE, "data")
 
 UA = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",

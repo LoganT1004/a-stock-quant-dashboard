@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 """收盘终值抓取：BK板块指数+美债10Y（东财，本机直连带重试）"""
+import os, sys
 import urllib.request, json, time, os
 
-DATA = r"C:\Users\ASUS\WorkBuddy\2026-08-03-11-17-59\data"
+DATA = r"os.path.dirname(os.path.abspath(__file__))\data"
 
 def get(url, timeout=20):
     req = urllib.request.Request(url, headers={"Referer": "https://quote.eastmoney.com/", "User-Agent": "Mozilla/5.0"})

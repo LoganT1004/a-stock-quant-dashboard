@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 """补齐缺失K线：创业板指/科创50走腾讯日线（转为东财格式）；SOX/DXY再试东财"""
+import os, sys
 import json, urllib.request, time, os, random, sys
 
-DATA_DIR = r"C:\Users\ASUS\WorkBuddy\2026-08-03-11-17-59\data"
+DATA_DIR = r"os.path.dirname(os.path.abspath(__file__))\data"
 
 def urlopen_json(url, timeout=20):
     req = urllib.request.Request(url, headers={

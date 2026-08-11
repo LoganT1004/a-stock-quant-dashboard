@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 """将 score_result.json 转换为看板 scoreSystem v2 结构（含快照对比），并合并赛道指数K线进 indexes"""
+import os, sys
 import json, os
 
-BASE = r"C:\Users\ASUS\WorkBuddy\2026-08-03-11-17-59"
+BASE = os.path.dirname(os.path.abspath(__file__))
 DATA = os.path.join(BASE, "data")
 
 sr = json.load(open(os.path.join(DATA, "score_result.json"), encoding="utf-8"))

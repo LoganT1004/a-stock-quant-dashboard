@@ -3,10 +3,11 @@
 数据源：东财Choice权益ETF日报（通过WebSearch获取）
 由消息面自动化（11:40/15:20）每日执行。
 """
+import os, sys
 import json, os
 from datetime import datetime
 
-DATA = r"C:\Users\ASUS\WorkBuddy\2026-08-03-11-17-59\data"
+DATA = r"os.path.dirname(os.path.abspath(__file__))\data"
 HIST = os.path.join(DATA, "etf_flow_history.json")
 
 def append_today(date_str, net3d, net7d=None, net30d=None):
