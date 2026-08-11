@@ -1,0 +1,61 @@
+name: A股科技赛道量化盯盘 - 自动刷新
+
+on:
+  schedule:
+    # 工作日 11:30 (CST) = 03:30 (UTC) — A股早盘结束后
+    - cron: '30 3 * * 1-5'
+    # 工作日 15:00 (CST) = 07:00 (UTC) — A股收盘后
+    - cron: '0 7 * * 1-5'
+  workflow_dispatch:  # 手动触发（用于测试）
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+      pages: write
+      id-token: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: pip-${{ runner.os }}-${{ hashFiles('requirements.txt') }}
+
+      - name: Run data pipeline (quick_refresh.py)
+        run: |
+          python quick_refresh.py
+          echo "=== Pipeline output ==="
+          cat data/refresh_status.json
+
+      - name: Verify key data files
+        run: |
+          echo "=== K-line dates ==="
+          python -c "
+          import json, os
+          for f in ['szzs_full.json','cybz_full.json','kc50_full.json','ndx100_full.json']:
+            if os.path.exists(f'data/{f}'):
+              d=json.load(open(f'data/{f}'))
+              k=list(d['data'].keys())[0]; bars=d['data'][k]['day']
+              print(f'{f}: {len(bars)} bars, last={bars[-1][0] if bars else \"N/A\"}')
+          "
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./deploy_dist
+          force_orphan: true
+          user_name: 'github-actions[bot]'
+          user_email: 'github-actions[bot]@users.noreply.github.com'
+          commit_message: 'Auto-refresh ${{ github.sha }} [skip ci]'
