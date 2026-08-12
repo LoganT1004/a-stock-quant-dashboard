@@ -9,8 +9,9 @@
 输出：score_result.json（含打分明细+快照序列）
 """
 import os, sys
-import json, os, re
+import json, re
 from datetime import datetime, timedelta
+from vol_utils import intraday_vol_factor
 
 BASE = os.path.dirname(os.path.abspath(__file__))
 DATA = os.path.join(BASE, "data")
@@ -176,7 +177,7 @@ def vol_score(rows):
     closes=[r["close"] for r in rows]
     # 量比 = 东方财富标准公式：今日成交量 / 前5日均量(不含今日)
     # 原公式 v5/v20 (短期/长期均量比) 错误，会偏高 5-15%
-    today_vol = rows[-1]["vol"]
+    today_vol = rows[-1]["vol"] * intraday_vol_factor()
     past5_vols = [r["vol"] for r in rows[-6:-1]]  # 前5个交易日(不含今日)
     past5_avg = sum(past5_vols) / 5 if len(past5_vols) == 5 else (sum(past5_vols) / max(len(past5_vols), 1) if past5_vols else 1)
     if past5_avg <= 0: return 50, "量能数据缺失"

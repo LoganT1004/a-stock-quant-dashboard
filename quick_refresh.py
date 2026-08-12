@@ -39,15 +39,73 @@ def em_snapshot(secid):
             time.sleep(1.2)
     return None
 
+
+def _fetch_index_from_qt(symbols):
+    """从腾讯 qt.gtimg.cn 拉取 A股指数实时快照，返回 {qt_code: bar}。
+    qt.gtimg.cn 本机/CI 均稳定，作为 push2his 被封时的双保险。"""
+    url = "https://qt.gtimg.cn/q=" + ",".join(symbols)
+    req = urllib.request.Request(url, headers={
+        "User-Agent": "Mozilla/5.0",
+        "Referer": "https://gu.qq.com/"})
+    raw = urllib.request.urlopen(req, timeout=15).read().decode("gbk", errors="ignore")
+    out = {}
+    for line in raw.strip().splitlines():
+        if "=" not in line:
+            continue
+        key, val = line.split("=", 1)
+        key = key.strip("v_")
+        parts = val.strip().strip('";').split("~")
+        if len(parts) < 35:
+            continue
+        try:
+            dt = parts[30]
+            if len(dt) < 8:
+                continue
+            date = "%s-%s-%s" % (dt[0:4], dt[4:6], dt[6:8])
+            out[key] = {
+                "date": date,
+                "open": float(parts[5]),
+                "close": float(parts[3]),
+                "high": float(parts[33]),
+                "low": float(parts[34]),
+                "vol": float(parts[6]),
+            }
+        except Exception:
+            pass
+    return out
+
+
+def _update_index_file(fn, key, bar, name):
+    """在指数日K文件中追加/覆盖今日 bar（保留全部历史）。"""
+    fp = os.path.join(DATA, fn)
+    if os.path.exists(fp):
+        d = json.load(open(fp, encoding="utf-8"))
+        day = d["data"][key].get("day") or d["data"][key].get("qfqday") or []
+    else:
+        d = {"code": 0, "msg": "", "data": {key: {"day": []}}}
+        day = []
+    day = [r for r in day if r[0] != bar["date"]]
+    day.append([
+        bar["date"],
+        "%.3f" % bar["open"],
+        "%.3f" % bar["close"],
+        "%.3f" % bar["high"],
+        "%.3f" % bar["low"],
+        "%.3f" % bar["vol"],
+    ])
+    d["data"][key]["day"] = day
+    json.dump(d, open(fp, "w", encoding="utf-8"), ensure_ascii=False)
+    print("  %s: 已更新 %s close=%.2f vol=%.0f" % (name, bar["date"], bar["close"], bar["vol"]))
+
 try:
     today_cn = time.strftime("%Y-%m-%d")
     os.makedirs(DATA, exist_ok=True)
     os.makedirs(os.path.join(DATA, "stocks"), exist_ok=True)
 
-    # ==================== 1) 指数日K：读取东财文件（由自动化任务 WebFetch→push2his 预先抓取） ====================
-    # 上证/创业板/科创50/纳指100 的日K文件：自动化任务每次运行会通过 WebFetch 抓取东财 push2his→写入
-    # 本管道不主动抓取，仅标注来源。若文件缺失或过期，自动化任务下次运行时补齐。
-    set_status("读取指数日K文件（东方财富push2his）")
+    # ==================== 1) 指数日K：主动同步今日 bar，保留全部历史 ====================
+    # 历史数据保留在仓库内；今日 bar 由本管道主动拉取，不再依赖已失效的 WorkBuddy 自动化。
+    # 主通道：腾讯快照 qt.gtimg.cn（本机/CI 均稳定）；次通道：东财 push2his（间歇通）。
+    set_status("同步A股指数日K（qt.gtimg.cn + push2his）")
     for fn, name in [("szzs_full.json", "上证指数"), ("cybz_full.json", "创业板指"),
                      ("kc50_full.json", "科创50"), ("ndx100_full.json", "纳斯达克100")]:
         fp = os.path.join(DATA, fn)
@@ -61,7 +119,39 @@ try:
             except Exception as e:
                 print("  %s: 读取异常 %s" % (name, e))
         else:
-            print("  %s: 文件不存在，等待自动化任务推送" % name)
+            print("  %s: 文件不存在" % name)
+
+    # 主通道：qt.gtimg.cn 更新上证/创业板/科创50 今日 bar
+    QT_INDEX_MAP = [
+        ("szzs_full.json", "sh000001", "sh000001", "上证指数"),
+        ("cybz_full.json", "sz399006", "sz399006", "创业板指"),
+        ("kc50_full.json", "sh000688", "sh000688", "科创50"),
+    ]
+    try:
+        qt_bars = _fetch_index_from_qt([x[2] for x in QT_INDEX_MAP])
+        for fn, key, qt_code, name in QT_INDEX_MAP:
+            if qt_code in qt_bars:
+                _update_index_file(fn, key, qt_bars[qt_code], name)
+    except Exception as e:
+        print("  qt.gtimg.cn 指数更新失败: %s" % str(e)[:80])
+
+    # 次通道：东财 push2his（若本机/CI 可通，则拉取完整历史并覆盖）
+    for fn, key, em_secid, name in [
+            ("szzs_full.json", "sh000001", "1.000001", "上证指数"),
+            ("cybz_full.json", "sz399006", "0.399006", "创业板指"),
+            ("kc50_full.json", "sh000688", "1.000688", "科创50")]:
+        try:
+            body = get("https://push2his.eastmoney.com/api/qt/stock/kline/get?secid=%s"
+                       "&fields1=f1,f2,f3,f4,f5,f6&fields2=f51,f52,f53,f54,f55,f56"
+                       "&klt=101&fqt=0&beg=20250101&end=20261231" % em_secid)
+            d = json.loads(body).get("data")
+            if d and d.get("klines"):
+                day = [k.split(",") for k in d["klines"]]
+                json.dump({"code": 0, "msg": "", "data": {key: {"day": day}}},
+                          open(os.path.join(DATA, fn), "w", encoding="utf-8"), ensure_ascii=False)
+                print("  %s: push2his 覆盖成功 %d bars" % (name, len(day)))
+        except Exception:
+            pass
     # SOX 日K文件（自动化任务 WebFetch→push2his 100.SOX）
     sox_fp = os.path.join(DATA, "sox_em.json")
     if not os.path.exists(sox_fp):
@@ -413,8 +503,9 @@ try:
     if r.returncode != 0:
         print("  fetch_daily_data.py 异常: %s" % (r.stderr or "")[-200:])
 
-    # ==================== 5) 依次跑评分→payload→风控→整合→论证→仓位→生成 ====================
-    for step, script in [("重算评分体系", "score_engine.py"), ("生成评分payload", "make_score_payload.py"),
+    # ==================== 5) 依次跑涨跌停→评分→payload→风控→整合→论证→仓位→生成 ====================
+    for step, script in [("更新涨跌停家数", "fetch_limit_count.py"),
+                         ("重算评分体系", "score_engine.py"), ("生成评分payload", "make_score_payload.py"),
                          ("合并补充数据", "update_hand_extra.py"), ("风控检测", "risk_engine.py"),
                          ("整合风控结论", "integrate_risk.py"), ("生成动态论证", "gen_argument.py"),
                          ("趋势仓位引擎", "position_engine.py"),

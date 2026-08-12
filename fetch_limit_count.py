@@ -1,83 +1,109 @@
 # -*- coding: utf-8 -*-
 """
-抓取东方财富 全市场涨停/跌停家数（沪深京 当日）
-官方源 URL: https://quote.eastmoney.com/ztb/?from=center
+抓取全市场涨停/跌停家数（沪深京A股）。
 
 实现思路：
-1. 调用 push2 clist API 分别拉涨停池(t:6)和跌停池(t:80)的total字段
-2. API返回total>200时是累计值，自动fallback到最近一次人工核对值
-3. 写入 data/limit_count.json
+1. 调用东方财富 push2 clist 全A实时列表（m:0+m:1+m:3），按页拉取；
+2. 对每只股票按 f3（涨跌幅）计数：f3 >= 9.9 计为涨停，f3 <= -9.9 计为跌停；
+3. 支持重试 + 超时保护。若扫描 0 只或 API 失败，保留最近一次有效值，
+   避免退回到硬编码旧值；
+4. 结果写入 data/limit_count.json。
+
+注：本机直连 push2 间歇被封（RemoteDisconnected），GitHub Actions 云端通常可通。
 """
 import json, os, time, urllib.request
+from datetime import datetime
 
 DATA = os.path.join(os.path.dirname(__file__), "data")
 OUT = os.path.join(DATA, "limit_count.json")
-
-# 数据源 URL（东方财富官方）
 SOURCE_URL = "https://quote.eastmoney.com/ztb/?from=center"
 
-# 8-11 牛熊风向标 截图精确值（API累计值过滤后使用）
-USER_PROVIDED = {
-    "date": "2026-08-11",
-    "rise": 1615,
-    "fall": 3777,
-    "limit_up": 60,
-    "limit_down": 2,
-    "natural_limit_up": 57,
-    "natural_limit_down": 2,
-    "src": "东方财富牛熊风向标(" + SOURCE_URL + ")",
-    "source_url": SOURCE_URL,
-}
 
-def _fetch_total(url):
-    """调用 push2 API 拿 total 字段"""
-    try:
-        req = urllib.request.Request(url, headers={
-            "User-Agent": "Mozilla/5.0",
-            "Referer": "https://quote.eastmoney.com/ztb/"
-        })
-        raw = urllib.request.urlopen(req, timeout=8).read().decode("utf-8")
-        raw = raw.lstrip("callback(").rstrip(");")
-        data = json.loads(raw).get("data", {})
-        return data.get("total", 0)
-    except Exception as e:
-        print(f"  API失败：{e}")
-        return None
+def _get(url, timeout=25, retries=5):
+    for i in range(retries):
+        try:
+            req = urllib.request.Request(url, headers={
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+                "Referer": "https://quote.eastmoney.com/ztb/",
+            })
+            return urllib.request.urlopen(req, timeout=timeout).read().decode("utf-8")
+        except Exception as e:
+            if i == retries - 1:
+                raise
+            time.sleep(2 ** i)
+
+
+def _page_url(pn, pz=100):
+    fs = "m:0+m:1+m:3"
+    return (
+        "https://push2.eastmoney.com/api/qt/clist/get?"
+        "pn=%d&pz=%d&po=1&np=1&fltt=2&invt=2&fid=f3&fs=%s&fields=f12,f14,f3"
+        % (pn, pz, fs)
+    )
+
+
+def _count_all():
+    limit_up = 0
+    limit_down = 0
+    total_seen = 0
+    pn = 1
+    pz = 100
+    while pn <= 60:
+        body = _get(_page_url(pn, pz))
+        d = json.loads(body) if body else {}
+        if not isinstance(d, dict):
+            raise ValueError("invalid response: %r" % (body[:120] if body else None,))
+        data = d.get("data") or {}
+        diff = data.get("diff") or []
+        if not diff:
+            break
+        for item in diff:
+            f3 = float(item.get("f3", 0))
+            if f3 >= 9.9:
+                limit_up += 1
+            if f3 <= -9.9:
+                limit_down += 1
+        total_seen += len(diff)
+        api_total = data.get("total", 0)
+        if api_total and total_seen >= int(api_total):
+            break
+        pn += 1
+        time.sleep(0.08)
+    return limit_up, limit_down, total_seen
+
+
+def load_existing():
+    if os.path.exists(OUT):
+        return json.load(open(OUT, encoding="utf-8"))
+    return {}
+
 
 def fetch():
-    """拉取今日真实涨停/跌停家数"""
-    out = dict(USER_PROVIDED)
+    out = load_existing()
     out["ts"] = time.time()
-    out["src"] = USER_PROVIDED["src"]
     out["source_url"] = SOURCE_URL
-
-    # 1. 涨停池（m:0+t:6 = 沪市涨停 / m:1+t:6 = 深市涨停）
-    up_url = "https://push2.eastmoney.com/api/qt/clist/get?pn=1&pz=1&po=1&np=1&fltt=2&invt=2&fid=f3&fs=m:0+t:6,m:1+t:6&fields=f12"
-    total_up = _fetch_total(up_url)
-
-    # 2. 跌停池（m:0+t:80 = 沪市跌停 / m:1+t:80 = 深市跌停）
-    down_url = "https://push2.eastmoney.com/api/qt/clist/get?pn=1&pz=1&po=1&np=1&fltt=2&invt=2&fid=f3&fs=m:0+t:80,m:1+t:80&fields=f12"
-    total_down = _fetch_total(down_url)
-
-    # 3. 校验：今日 涨停/跌停 实际应在 0-200 范围内，>200 是累计值
-    if total_up is not None and 0 < total_up <= 200:
-        out["limit_up"] = total_up
-        out["src"] = "东方财富 push2 API(实时涨停池)"
-        print(f"  涨停: {total_up}")
-    else:
-        print(f"  涨停 API返回{total_up}，使用人工核对值 60")
-
-    if total_down is not None and 0 <= total_down <= 200:
-        out["limit_down"] = total_down
-        out["src_detail"] = "实时跌停池"
-        print(f"  跌停: {total_down}")
-    else:
-        print(f"  跌停 API返回{total_down}，使用人工核对值 2")
-
+    try:
+        up, down, seen = _count_all()
+        # 扫描 0 只通常是网络被截断/空返回，保留旧值避免显示 0/0
+        if seen == 0:
+            raise ValueError("API 返回空列表，视为失败")
+        out.update({
+            "date": datetime.now().strftime("%Y-%m-%d"),
+            "limit_up": up,
+            "limit_down": down,
+            "seen": seen,
+            "src": "东方财富 push2 clist（全A实时 f3≥9.9% / f3≤-9.9% 计数）",
+        })
+        print("涨停=%d 跌停=%d（扫描 %d 只）" % (up, down, seen))
+    except Exception as e:
+        print("涨跌停 API 失败: %s，保留旧值" % str(e)[:120])
+        out["src"] = (out.get("src", "") + " [API失败，保留旧值]").strip()
+        if "date" not in out:
+            out["date"] = datetime.now().strftime("%Y-%m-%d")
     return out
+
 
 if __name__ == "__main__":
     data = fetch()
     json.dump(data, open(OUT, "w", encoding="utf-8"), ensure_ascii=False, indent=2)
-    print(f"limit_count saved: 涨停={data['limit_up']} 跌停={data['limit_down']}")
-    print(f"src: {data['src']}")
+    print("limit_count saved: 涨停=%d 跌停=%d" % (data.get("limit_up", 0), data.get("limit_down", 0)))

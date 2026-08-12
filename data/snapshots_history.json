@@ -239,5 +239,20 @@
   "trendName": "震荡市·中位横盘",
   "trendStartDate": "2026-08-04",
   "sigBrief": "九转计数：上证-/创业板-/科创50-；综合57.6分（中性震荡区）"
+ },
+ {
+  "time": "2026-08-12 13:31",
+  "label": "盘中",
+  "composite": 60.5,
+  "zone": "中性震荡区",
+  "tech": 63.3,
+  "overseas": 53.7,
+  "capital": 51.5,
+  "fund": 66.5,
+  "extras": 5,
+  "trend": "bottom",
+  "trendName": "震荡市·低位摸底",
+  "trendStartDate": "2026-08-12",
+  "sigBrief": "九转计数：上证-/创业板-/科创50-；综合60.5分（中性震荡区）"
  }
 ]

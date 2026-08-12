@@ -3,6 +3,7 @@
 import os, sys
 import json, re
 from datetime import datetime
+from vol_utils import intraday_vol_factor
 
 BASE = os.path.dirname(os.path.abspath(__file__))
 DATA = os.path.join(BASE, "data")
@@ -94,7 +95,9 @@ def auto_signal(rows, name):
     # 修正后：today_vol / past5day_avg → 0.94/0.90/1.00（与东方财富一致）
     past5_vols = [r["vol"] for r in rows[-6:-1]]  # 前5个交易日（不含今日）
     vol_ma5 = sum(past5_vols) / 5 if len(past5_vols) == 5 else (sum(past5_vols) / len(past5_vols) if past5_vols else 0)
-    vr = round(rows[-1]["vol"] / vol_ma5, 2) if vol_ma5 > 0 else None
+    # 盘中按已交易时长投影到全日，使盘中量比与东方财富 APP 一致
+    today_vol = rows[-1]["vol"] * intraday_vol_factor()
+    vr = round(today_vol / vol_ma5, 2) if vol_ma5 > 0 else None
     dif_s = round(dif[-1], 2); dea_s = round(dea[-1], 2)
     macd_state = "DIF在DEA上方" if dif[-1] > dea[-1] else "DIF在DEA下方"
     detail = ("DIF=%s/DEA=%s（%s）；收盘%sMA5（%s）已连续%s日；量比%s%s" %

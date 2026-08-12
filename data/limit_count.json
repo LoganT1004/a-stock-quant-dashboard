@@ -6,7 +6,7 @@
   "limit_down": 2,
   "natural_limit_up": 57,
   "natural_limit_down": 2,
-  "src": "东方财富牛熊风向标(https://quote.eastmoney.com/ztb/?from=center)",
+  "src": "东方财富牛熊风向标(https://quote.eastmoney.com/ztb/?from=center) [API失败，保留旧值]",
   "source_url": "https://quote.eastmoney.com/ztb/?from=center",
-  "ts": 1786439708.8602026
+  "ts": 1786512716.0645006
 }

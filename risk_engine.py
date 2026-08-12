@@ -17,8 +17,9 @@
      量比=成分股合计成交量（track_indexes.json）；宽基=腾讯K线。
 """
 import os, sys
-import json, os
+import json
 from datetime import datetime
+from vol_utils import intraday_vol_factor
 
 BASE = os.path.dirname(os.path.abspath(__file__))
 DATA = os.path.join(BASE, "data")
@@ -103,7 +104,7 @@ for t, meta in TRACK_BK.items():
     below_ma10w = wvals[-1] < ma10w[-1] if len(wvals) >= 10 else None
     # 量比：东方财富标准公式 = 今日成交量 / 前5日均量(不含今日)
     # 原 v5/v20 (5日均/20日均) 错误，平均偏高 5-15%
-    today_vol = vols[-1]
+    today_vol = vols[-1] * intraday_vol_factor()
     past5_avg = sum(vols[-6:-1]) / 5 if len(vols) >= 6 else (sum(vols[:-1]) / max(len(vols)-1, 1) if len(vols) > 1 else 0)
     vol_ratio = today_vol / past5_avg if past5_avg > 0 else 1
     src_tag = "东财板块指数%s（%s）" % (meta["code"], last["date"])
@@ -179,7 +180,7 @@ if kc50:
     # 短期/长期均量比用于判断放量趋势
     v5 = sum(vols[-6:-1]) / 5 if len(vols) >= 6 else (sum(vols[:-1]) / max(len(vols)-1, 1) if len(vols) > 1 else 0)
     v20 = sum(vols[-21:-1]) / 20 if len(vols) >= 21 else (sum(vols[:-1]) / max(len(vols)-1, 1) if len(vols) > 1 else 0)
-    today_vol = vols[-1]
+    today_vol = vols[-1] * intraday_vol_factor()
     vol_ratio = today_vol / v5 if v5 > 0 else 1  # 标准量比
     vol_expand = vol_ratio > 1.2  # 用标准量比判断放量
     cur = ("收盘%.2f（%s）｜平台下沿%.2f｜连续%d日收于平台下方｜量比%.2f（%s）" % (
