@@ -2,8 +2,9 @@ name: auto-refresh
 on:
   workflow_dispatch:
   schedule:
-    - cron: '30 3 * * 1-5'
-    - cron: '0 7 * * 1-5'
+    - cron: '30 3 * * 1-5'   # 北京时间 11:30（午盘）
+    - cron: '30 7 * * 1-5'   # 北京时间 15:30（收盘后30分钟，避开整点高峰）
+    - cron: '45 8 * * 1-5'   # 北京时间 16:45（收盘兜底，防止15:30的cron被GitHub延迟/丢弃）
 
 jobs:
   refresh:

@@ -12,6 +12,7 @@
 import os, sys
 import json, os, re, time, urllib.request, ssl
 from datetime import datetime
+from cn_time import now_cn, today_cn
 
 BASE = os.path.dirname(os.path.abspath(__file__))
 DATA = os.path.join(BASE, "data")
@@ -98,7 +99,7 @@ def fetch_dr007():
     数据源：全国银行间同业拆借中心 chinamoney.com.cn (公开 API，本机可用)
     """
     fp = os.path.join(DATA, "dr007.json")
-    today = datetime.now().strftime("%Y-%m-%d")
+    today = today_cn()
     # 抓过去 30 天的 DR007
     from datetime import timedelta
     start = (datetime.now() - timedelta(days=30)).strftime("%Y-%m-%d")
@@ -152,7 +153,7 @@ def fetch_margin():
     """
     fp = os.path.join(DATA, "margin_history.json")
     result_fp = os.path.join(DATA, "margin_result.json")
-    today = datetime.now().strftime("%Y-%m-%d")
+    today = today_cn()
     # 1) 优先读 WebFetch 抓的 margin_result.json（自动化通道）
     if os.path.exists(result_fp):
         try:
@@ -227,7 +228,7 @@ def fetch_etf_flow_today():
     """
     fp = os.path.join(DATA, "etf_flow_history.json")
     result_fp = os.path.join(DATA, "etf_flow_result.json")
-    today = datetime.now().strftime("%Y-%m-%d")
+    today = today_cn()
     # 1) 优先读 etf_flow_result.json
     if os.path.exists(result_fp):
         try:
@@ -291,7 +292,7 @@ def main():
     print(f"fetch_daily_data  起始: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print("=" * 60)
 
-    today = datetime.now().strftime("%Y-%m-%d")
+    today = today_cn()
 
     # ========== 1) 16家公司涨跌幅+主力净流入 ==========
     print("\n[1] 公司BI实时数据（新浪 hq.sinajs.cn）")
@@ -399,7 +400,7 @@ def main():
         # 生成 todo 文件提示自动化任务需要补
         todo_path = os.path.join(DATA, ".todo_etf_flow.json")
         if not os.path.exists(todo_path):
-            today = datetime.now().strftime("%Y-%m-%d")
+            today = today_cn()
             json.dump({"date": today, "needed": ["net3d", "net7d", "net30d"],
                        "created": datetime.now().isoformat(),
                        "src_hint": "东方财富Choice权益ETF日报/财中ETF日报"},

@@ -4,6 +4,7 @@ import os, sys
 import json, re
 from datetime import datetime
 from vol_utils import intraday_vol_factor
+from cn_time import now_cn, today_cn
 
 BASE = os.path.dirname(os.path.abspath(__file__))
 DATA = os.path.join(BASE, "data")
@@ -234,8 +235,8 @@ payload_hand = json.load(open(os.path.join(BASE, "payload_hand.json"), encoding=
 payload = {
     "meta": {
         "date": idx["szzs"]["dates"][-1],
-        "session": ("盘中实时" if idx["szzs"]["dates"][-1] == datetime.now().strftime("%Y-%m-%d") and datetime.now().hour < 15 else "收盘更新（15:00）"),
-        "aShareTime": idx["szzs"]["dates"][-1] + (" 盘中" if idx["szzs"]["dates"][-1] == datetime.now().strftime("%Y-%m-%d") and datetime.now().hour < 15 else " 15:00"),
+        "session": ("盘中实时" if idx["szzs"]["dates"][-1] == today_cn() and now_cn().hour < 15 else "收盘更新（15:00）"),
+        "aShareTime": idx["szzs"]["dates"][-1] + (" 盘中" if idx["szzs"]["dates"][-1] == today_cn() and now_cn().hour < 15 else " 15:00"),
         "overseasTime": (idx["ndx"]["dates"][-1] + " 收盘（美股）") if "ndx" in idx else "—",
         "note": "全线采用东方财富行情数据（push2his日K + datacenter-web报告 + push2实时快照）；VXN：CBOE官方；美国10Y CDS：英为财情（自动化推送）"
     },
@@ -275,10 +276,10 @@ for k in idx:
 print("signals:", [(s["name"], s["close"], s["chg"], s["nine"]) for s in signals])
 
 # ---------- 云部署目录同步（deploy_dist 保持最新静态版，带 cache-busting 时间戳）----------
-import shutil, datetime as _dt
+import shutil
 DEPLOY = os.path.join(BASE, "deploy_dist")
 os.makedirs(DEPLOY, exist_ok=True)
-_ts = _dt.datetime.now().strftime("%Y%m%d%H%M")
+_ts = now_cn().strftime("%Y%m%d%H%M")
 for f in ("data.js", "collab.js", "echarts.min.js"):
     src = os.path.join(OUT, f)
     if os.path.exists(src):
