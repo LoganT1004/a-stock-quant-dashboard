@@ -583,7 +583,7 @@ html,body{overflow-x:hidden;}
 
 <div class="toast" id="toast"><div class="tt" id="toast-t"></div><div class="tb" id="toast-b"></div></div>
 
-<script src="data.js?v=202608122259"></script>
+<script src="data.js?v=202608122332"></script>
 <script src="collab.js?v=20260811185230"></script>
 <script>
 const D = window.DASHBOARD_DATA;
@@ -1049,11 +1049,13 @@ function renderSnapshots(){
       });
     }
   });
-  // 2026-08-12 修订：从 P.trendJudgments 渲染所有历史趋势判定/变更标注（永不删除）
+  // 2026-08-12 修订：从 D.position.trendJudgments 渲染所有历史趋势判定/变更标注（永不删除）
   // 类型：judgment(初始判定,青绿色) | trend(变更,红色) | active(生效起始,橙色)
-  if(P.trendJudgments && P.trendJudgments.length){
+  // 注意：renderSnapshots 内的局部变量是 S (scoreSystem)，不是 P (position)
+  const _pos = D.position || {};
+  if(_pos.trendJudgments && _pos.trendJudgments.length){
     const usedDates = new Set();
-    P.trendJudgments.forEach((m, mi)=>{
+    _pos.trendJudgments.forEach((m, mi)=>{
       // 找到对应快照索引
       let idx = recentSnaps.findIndex(s => s.time.startsWith(m.date));
       if(idx < 0){
