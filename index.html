@@ -582,7 +582,7 @@ html,body{overflow-x:hidden;}
 
 <div class="toast" id="toast"><div class="tt" id="toast-t"></div><div class="tb" id="toast-b"></div></div>
 
-<script src="data.js?v=202608120354"></script>
+<script src="data.js?v=202608120432"></script>
 <script src="collab.js?v=20260811185230"></script>
 <script>
 const D = window.DASHBOARD_DATA;
@@ -1986,9 +1986,94 @@ renderScores();renderRisk();
     showToast('更新失败','行情接口暂时不可用（网络限制），请稍后重试；午盘/收盘自动化会定时刷新。');
   });
 }
+/* ---------- GitHub Pages：一键触发 GitHub Actions 全量更新 ---------- */
+function isGitHubPages(){
+  return location.hostname==='logant1004.github.io' || location.hostname.endsWith('.github.io');
+}
+function ghTokenKey(){ return 'quant_dashboard_gh_token'; }
+function getGitHubToken(){ return localStorage.getItem(ghTokenKey())||''; }
+function setGitHubToken(t){ localStorage.setItem(ghTokenKey(),t); }
+function clearGitHubToken(){ localStorage.removeItem(ghTokenKey()); }
+
+function dispatchGitHubWorkflow(btn){
+  let token=getGitHubToken();
+  if(!token){
+    const msg='在 GitHub Pages 上一键全量更新需要 GitHub Personal Access Token（classic，至少勾选 repo + workflow）。\n\n点击“确定”粘贴 token，或点击“取消”只查看手动触发页面。\n\n创建 token：https://github.com/settings/tokens/new?scopes=repo,workflow&description=quant-dashboard';
+    const input=window.prompt(msg,'');
+    if(input===null || !input.trim()){
+      btn.disabled=false;btn.textContent='⟳ 一键更新行情';
+      showToast('未输入 Token','你可以前往 GitHub Actions 页面手动点击“Run workflow”触发全量更新。');
+      window.open('https://github.com/LoganT1004/a-stock-quant-dashboard/actions/workflows/main.yml','_blank');
+      return;
+    }
+    token=input.trim(); setGitHubToken(token);
+  }
+  btn.textContent='⟳ 触发 GitHub Actions…';
+  fetch('https://api.github.com/repos/LoganT1004/a-stock-quant-dashboard/actions/workflows/main.yml/dispatches',{
+    method:'POST',
+    headers:{
+      'Accept':'application/vnd.github+json',
+      'Authorization':'token '+token,
+      'Content-Type':'application/json',
+      'X-GitHub-Api-Version':'2022-11-28'
+    },
+    body:JSON.stringify({ref:'master'})
+  }).then(r=>{
+    if(r.status===204 || r.ok){
+      btn.textContent='⟳ 工作流运行中…';
+      showToast('✅ 已触发 GitHub Actions 全量更新','约 2–3 分钟后数据会重新生成并部署到本页；页面将自动检测完成并刷新。');
+      pollGitHubRun(btn,token,Date.now());
+    }else if(r.status===401 || r.status===403){
+      clearGitHubToken();
+      btn.disabled=false;btn.textContent='⟳ 一键更新行情';
+      showToast('Token 无效或权限不足','已清除本地 token，请重新点击按钮并输入具有 repo + workflow 权限的 token。');
+    }else{
+      throw new Error('HTTP '+r.status);
+    }
+  }).catch(e=>{
+    btn.disabled=false;btn.textContent='⟳ 一键更新行情';
+    showToast('触发失败','GitHub API 请求失败：'+e.message+'<br>可前往 Actions 页面手动触发。');
+  });
+}
+
+function pollGitHubRun(btn,token,since){
+  let attempts=0;
+  const maxAttempts=90; // 约 3 分钟
+  const timer=setInterval(()=>{
+    attempts++;
+    fetch('https://api.github.com/repos/LoganT1004/a-stock-quant-dashboard/actions/runs?per_page=5',{
+      headers:{'Accept':'application/vnd.github+json','Authorization':'token '+token}
+    }).then(r=>r.json()).then(data=>{
+      const runs=(data&&data.workflow_runs)||[];
+      const run=runs.find(x=>new Date(x.created_at).getTime()>since && x.name==='auto-refresh');
+      if(!run) return;
+      if(run.status!=='completed'){ btn.textContent='⟳ 工作流运行中…'; return; }
+      clearInterval(timer);
+      if(run.conclusion==='success'){
+        btn.textContent='⟳ 刷新页面…';
+        sessionStorage.setItem('dashReloadToast','1');
+        location.reload();
+      }else{
+        btn.disabled=false;btn.textContent='⟳ 一键更新行情';
+        showToast('工作流未完成','GitHub Actions 运行结论：'+run.conclusion+'<br>请查看运行日志：'+run.html_url);
+      }
+    }).catch(()=>{});
+    if(attempts>=maxAttempts){
+      clearInterval(timer);
+      btn.disabled=false;btn.textContent='⟳ 一键更新行情';
+      showToast('检测超时','工作流可能仍在后台运行，请稍后手动刷新页面。');
+    }
+  },2000);
+}
+
 function refreshNow(){
   const btn=document.getElementById('btn-refresh');
   btn.disabled=true;btn.textContent='⟳ 启动全量刷新…';
+  // GitHub Pages：没有后端，触发 GitHub Actions workflow_dispatch 全量更新
+  if(isGitHubPages()){
+    dispatchGitHubWorkflow(btn);
+    return;
+  }
   // 第一优先：服务器端数据管道全量刷新（指数/个股/ETF/美债/评分/风控 全部重算）
   fetch('/api/refresh',{method:'POST'}).then(r=>r.json()).then(()=>{
     let ticks=0;
