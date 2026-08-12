@@ -444,30 +444,52 @@ def build_track_recommendations(track_scores, news_items, flow_summary, action, 
 
     # 不管 action 是什么，按 6:4 分配金额到 primary/secondary（按 score 高低）
     # 金额方向跟 target_diff 一致（diff>0 加仓 / diff<0 减仓）；action="不动" 时仍按差额方向输出理想金额
+    # 2026-08-12 修订：分数相同时需要确定性 tie-breaker（避免依赖 dict 插入顺序导致优先级任意）
     abs_diff = abs(target_diff)
+    trend_strength = {"down": 0, "top": 1, "mid": 2, "bottom": 3, "up": 4}  # 越弱越靠前（减仓优先）
+    def _tie_key(track_score, reverse=False):
+        """分数相同时的二级排序键：技术面越弱→减仓越先；技术面越强→加仓越先"""
+        track_name, score = track_score
+        tech_trend = (tech_tracks or {}).get(track_name, "neutral")
+        ts = trend_strength.get(tech_trend, 2)
+        return (score, ts if not reverse else 4 - ts)
+    # 2026-08-12 修订：检测分数完全相等的情况（三赛道同时段都为同一档位）
+    score_vals = list(track_scores.values())
+    all_tied = len(set(round(s, 2) for s in score_vals)) == 1 and len(track_scores) >= 2
     if target_diff > 0:
-        # 加仓场景：分高的优先加
-        tracks_sorted_desc = sorted(track_scores.items(), key=lambda x: -x[1])
-        p_track = tracks_sorted_desc[0][0] if len(tracks_sorted_desc) >= 1 else None
-        s_track = tracks_sorted_desc[1][0] if len(tracks_sorted_desc) >= 2 else None
-        h_tracks = [t[0] for t in tracks_sorted_desc[2:]]
+        # 加仓场景：分高的优先加；分数相同时技术面强的优先加
+        tracks_sorted = sorted(track_scores.items(), key=lambda x: _tie_key(x, reverse=True))
         op_name = "加仓"
     elif target_diff < 0:
-        # 减仓场景：分低的优先减
-        tracks_sorted_asc = sorted(track_scores.items(), key=lambda x: x[1])
-        p_track = tracks_sorted_asc[0][0] if len(tracks_sorted_asc) >= 1 else None
-        s_track = tracks_sorted_asc[1][0] if len(tracks_sorted_asc) >= 2 else None
-        h_tracks = [t[0] for t in tracks_sorted_asc[2:]]
+        # 减仓场景：分低的优先减；分数相同时技术面弱的优先减
+        tracks_sorted = sorted(track_scores.items(), key=lambda x: _tie_key(x, reverse=False))
         op_name = "减仓"
     else:
         # diff=0：所有赛道维持
-        p_track = None
-        s_track = None
-        h_tracks = list(track_scores.keys())
+        tracks_sorted = [(t, 0) for t in track_scores.keys()]
         op_name = "维持"
+    # 2026-08-12 修订：分数完全相等时等额分配，避免 primary/secondary/hold 任意分配误导决策
+    equal_split = all_tied and abs_diff >= 0.5
+    if equal_split:
+        per_track = round(abs_diff / len(tracks_sorted), 1)
+        tracks_sorted = [(t, per_track) for t, _ in tracks_sorted]
+        # 等额场景下，重新指定 primary/secondary/hold：按赛道名字典序标记
+        # 逻辑上无可区分，但保留结构让前端展示"等额分配"
+        p_track = tracks_sorted[0][0]
+        s_track = tracks_sorted[1][0] if len(tracks_sorted) >= 2 else None
+        h_tracks = [t[0] for t in tracks_sorted[2:]]
+    else:
+        p_track = tracks_sorted[0][0] if len(tracks_sorted) >= 1 else None
+        s_track = tracks_sorted[1][0] if len(tracks_sorted) >= 2 else None
+        h_tracks = [t[0] for t in tracks_sorted[2:]]
 
-    # 金额分配（6:4:0）
-    if abs_diff < 0.5:
+    # 金额分配（6:4:0；分数完全相等时三赛道等额）
+    if equal_split:
+        # 2026-08-12 修订：分数完全相等时，三个赛道各分 1/3（primary/secondary/hold 都参与）
+        each = round(abs_diff / 3, 1)
+        p_amt = s_amt = h_amt = each
+        amount_note = "（三赛道分数完全相等，等额分配各" + str(each) + "成）"
+    elif abs_diff < 0.5:
         # 差额过小，所有金额 0；保留为"暂不调整"
         p_amt = s_amt = h_amt = 0
         amount_note = "（总差额<0.5成，按规则不动）"
@@ -481,8 +503,12 @@ def build_track_recommendations(track_scores, news_items, flow_summary, action, 
         """生成单个赛道对象（含 logic 4 维度）"""
         trend_desc, score_desc, ex_desc = _build_logic(track, track_scores[track])
         # logic 4 维度明确标签：技术面｜综合分位｜消息面｜建议
+        # 2026-08-12 修订：等额分配场景下，等额赛道显示"等额分配"而非"维持"
         if amt > 0:
-            logic = f"技术面：{trend_desc} ｜ 综合分位：{score_desc} ｜ 消息面：{ex_desc} ｜ {slot_label}{sub_action}{amt}成"
+            if equal_split:
+                logic = f"技术面：{trend_desc} ｜ 综合分位：{score_desc} ｜ 消息面：{ex_desc} ｜ {slot_label}{op_name}{amt}成"
+            else:
+                logic = f"技术面：{trend_desc} ｜ 综合分位：{score_desc} ｜ 消息面：{ex_desc} ｜ {slot_label}{sub_action}{amt}成"
         else:
             logic = f"技术面：{trend_desc} ｜ 综合分位：{score_desc} ｜ 消息面：{ex_desc} ｜ {slot_label}维持当前配置"
         return {
@@ -494,10 +520,10 @@ def build_track_recommendations(track_scores, news_items, flow_summary, action, 
 
     out = {
         "primary": _make_obj(p_track, p_amt, op_name,
-                              "【优先" + op_name + "】") if p_track else None,
+                              ("【等额】" if equal_split else "【优先" + op_name + "】")) if p_track else None,
         "secondary": _make_obj(s_track, s_amt, op_name,
-                                "【次选" + op_name + "】") if s_track else None,
-        "hold": [_make_obj(t, h_amt, "维持", "【维持】") for t in h_tracks],
+                                ("【等额】" if equal_split else "【次选" + op_name + "】")) if s_track else None,
+        "hold": [_make_obj(t, h_amt, "维持" if not equal_split else op_name, "【等额】" if equal_split else "【维持】") for t in h_tracks],
     }
     return out
 
