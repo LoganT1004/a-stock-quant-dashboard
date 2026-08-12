@@ -220,14 +220,14 @@ try:
         print("  个股日K: 等待自动化任务推送")
 
     # ==================== 2) BK板块指数：东财 push2his 日K（自动化推送+本机直连双保险） ====================
-    set_status("更新板块指数（东方财富push2his）")
+    set_status("更新板块指数（东方财富push2his + push2快照覆盖）")
     BK = {"半导体设备": ("bk1326_raw.json", "90.BK1326"),
           "存储芯片": ("bk1137_raw.json", "90.BK1137"),
           "光通信模块": ("bk1136_raw.json", "90.BK1136")}
     for t, (fn, secid) in BK.items():
         fp = os.path.join(DATA, fn)
         done = False
-        # 通道1：东财本机直连（间歇可通）
+        # 通道1：东财本机直连 push2his 日K（间歇可通）
         try:
             body = get("https://push2his.eastmoney.com/api/qt/stock/kline/get?secid=%s"
                        "&fields1=f1,f2,f3,f4,f5,f6&fields2=f51,f52,f53,f54,f55,f56"
@@ -240,11 +240,31 @@ try:
         except Exception:
             pass
         if done:
-            print("  %s: 直连成功" % t)
+            print("  %s: 直连push2his成功" % t)
         elif os.path.exists(fp):
-            print("  %s: 读取已有文件（等待自动化WebFetch刷新）" % t)
+            print("  %s: 读取已有文件" % t)
         else:
             print("  %s: 无数据" % t)
+        # 通道2：用 push2 实时快照覆盖最后bar的成交量（确保量比与东方财富APP一致）
+        # push2 stock/get 在本机通常可通，且返回的 f47 成交量与APP同源
+        try:
+            snap = em_snapshot(secid)
+            if snap and snap.get("close"):
+                d2 = json.load(open(fp, encoding="utf-8"))
+                klines = d2.get("klines", [])
+                if klines:
+                    last = klines[-1].split(",")
+                    today_cn_bk = last[0]
+                    # 用快照的开高低收覆盖最后bar，确保成交量是收盘后的真实值
+                    new_bar = "%s,%s,%s,%s,%s,%s" % (today_cn_bk, snap["open"], snap["close"],
+                                                     snap["high"], snap["low"], snap["close"] and int(float(snap.get("vol", 0))) or last[5])
+                    klines[-1] = new_bar
+                    d2["klines"] = klines
+                    d2["src"] = d2.get("src", "") + "+push2快照覆盖"
+                    json.dump(d2, open(fp, "w", encoding="utf-8"), ensure_ascii=False)
+                    print("    快照覆盖: close=%.2f vol字段=%s" % (snap["close"], last[5]))
+        except Exception as e:
+            print("    快照覆盖失败: %s" % str(e)[:80])
         time.sleep(0.2)
 
     # ==================== 3) 美债10Y + 美元指数DXY：东财日K + 快照实时值 ====================

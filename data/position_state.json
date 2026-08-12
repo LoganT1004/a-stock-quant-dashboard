@@ -469,6 +469,66 @@
    "action": "不动",
    "amount": 0.0,
    "acked": false
+  },
+  {
+   "date": "2026-08-12",
+   "trend": "bottom",
+   "zone": "中性",
+   "score": 60.1,
+   "target": 6,
+   "action": "不动",
+   "amount": 0.0,
+   "acked": false
+  },
+  {
+   "date": "2026-08-12",
+   "trend": "bottom",
+   "zone": "中性",
+   "score": 60.1,
+   "target": 6,
+   "action": "不动",
+   "amount": 0.0,
+   "acked": false
+  },
+  {
+   "date": "2026-08-12",
+   "trend": "bottom",
+   "zone": "中性",
+   "score": 60.1,
+   "target": 6,
+   "action": "不动",
+   "amount": 0.0,
+   "acked": false
+  },
+  {
+   "date": "2026-08-12",
+   "trend": "bottom",
+   "zone": "中性",
+   "score": 60.1,
+   "target": 6,
+   "action": "不动",
+   "amount": 0.0,
+   "acked": false
+  },
+  {
+   "date": "2026-08-12",
+   "trend": "bottom",
+   "zone": "中性",
+   "score": 60.1,
+   "target": 6,
+   "action": "不动",
+   "amount": 0.0,
+   "acked": false
+  },
+  {
+   "date": "2026-08-12",
+   "trend": "bottom",
+   "zone": "中性",
+   "score": 60.1,
+   "target": 6,
+   "action": "不动",
+   "amount": 0.0,
+   "acked": false
   }
  ],
  "user_acked": false,

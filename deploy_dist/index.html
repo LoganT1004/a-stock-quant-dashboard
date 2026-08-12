@@ -315,7 +315,7 @@ html,body{overflow-x:hidden;}
   <button id="btn-refresh" onclick="refreshNow()">⟳ 一键更新行情</button>
   <span id="user-area" style="display:flex;gap:10px;align-items:center;"></span>
   <nav>
-    <a href="#sec-risk">风控</a><a href="#sec-verdict">结论</a><a href="#sec-score">评分</a><a href="#sec-signal">信号</a><a href="#sec-board">数据看板</a><a href="#sec-bi">公司BI</a><a href="#sec-src">数据来源</a><a href="#sec-alarm">提醒</a><a href="#sec-report">报告</a>
+    <a href="#sec-risk">风控</a><a href="#sec-verdict">结论</a><a href="#sec-score">评分</a><a href="#sec-signal">信号</a><a href="#sec-board">数据看板</a><a href="#sec-src">数据来源</a><a href="#sec-alarm">提醒</a><a href="#sec-report">报告</a>
   </nav>
 </header>
 <div class="wrap">
@@ -496,18 +496,6 @@ html,body{overflow-x:hidden;}
     </div>
   </div>
 
-  <div class="card" id="sec-bi">
-    <h2>公司BI · 三大赛道持仓标的 <span class="badge b-green" style="font-size:11px;">今日收盘行情已补齐 16/16</span></h2>
-    <div class="section-note" id="co-note">点击公司卡片查看个股维度数据。</div>
-    <div class="seg" id="track-seg">
-      <button class="on" data-k="全部">全部</button>
-      <button data-k="半导体设备">半导体设备</button>
-      <button data-k="存储芯片">存储芯片</button>
-      <button data-k="光通信模块">光通信模块</button>
-    </div>
-    <div class="co-grid" id="co-grid"></div>
-  </div>
-
   <div class="card" id="sec-src">
     <h2>数据来源管理</h2>
     <div class="section-note">内置来源不可删除；可自行添加新来源（保存在本机浏览器，随时补充）。</div>
@@ -547,13 +535,6 @@ html,body{overflow-x:hidden;}
   </footer>
 </div>
 
-<div class="modal-mask" id="co-modal" onclick="if(event.target===this)this.classList.remove('show')">
-  <div class="modal">
-    <button class="close" onclick="document.getElementById('co-modal').classList.remove('show')">✕</button>
-    <div id="co-modal-body"></div>
-  </div>
-</div>
-
 <!-- 登录/注册modal -->
 <div class="modal-mask" id="auth-modal" onclick="if(event.target===this)this.classList.remove('show')">
   <div class="modal" style="max-width:380px;">
@@ -583,7 +564,7 @@ html,body{overflow-x:hidden;}
 
 <div class="toast" id="toast"><div class="tt" id="toast-t"></div><div class="tb" id="toast-b"></div></div>
 
-<script src="data.js?v=202608122345"></script>
+<script src="data.js?v=202608130002"></script>
 <script src="collab.js?v=20260811185230"></script>
 <script>
 const D = window.DASHBOARD_DATA;
@@ -1651,51 +1632,6 @@ if(D.margin.newAccounts){
 
 /* ---------- 回测板块已按用户要求移除 ---------- */
 
-/* ---------- 公司BI ---------- */
-function renderCos(track){
-  document.getElementById('co-note').innerHTML = '点击公司卡片查看个股维度数据。「今日表现」为 <b>'+D.meta.date+'</b> '+(D.meta.session.includes('盘中')?'盘中实时':'收盘')+'行情；资金动向（主力/超大单/大单净流入）来自<b>东方财富</b>（'+(D.companies[0]&&D.companies[0].flow?D.companies[0].flow.date:'最新')+'）。<span class="alert-tag surge">大涨异动</span><span class="alert-tag inflow">主力爆买</span><span class="alert-tag news">重大消息</span> 为当日特别标注（涨幅≥7%/主力≥10亿/消息面提及）。';
-  const list = D.companies.filter(c=>track==='全部'||c.track===track);
-  document.getElementById('co-grid').innerHTML = list.map(c=>
-    '<div class="co-card'+(c.alerts?' has-alert':'')+'" onclick="showCo(\''+c.name+'\')"><div class="cn">'+c.name+'</div><span class="ct">'+c.track+'</span>'+
-    '<div class="cv">今日：'+fmtChg(c.today)+'</div>'+
-    '<div class="cf">'+(c.flow?('主力：<b style="color:'+(c.flow.main>=0?'#e53935':'#00a05a')+'">'+(c.flow.main>=0?'+':'')+c.flow.main+'亿</b>'):(c.fund?c.fund:'资金：暂无数据'))+'</div>'+
-    (c.alerts?'<div class="alert-row">'+c.alerts.map(a=>'<span class="alert-tag '+a.type+'" title="'+a.note+'">'+a.label+'</span>').join('')+'</div>':'')+'</div>').join('');
-}
-document.querySelectorAll('#track-seg button').forEach(b=>b.onclick=()=>{
-  document.querySelectorAll('#track-seg button').forEach(x=>x.classList.remove('on'));
-  b.classList.add('on'); renderCos(b.dataset.k);
-});
-renderCos('全部');
-function showCo(name){
-  const c = D.companies.find(x=>x.name===name); if(!c) return;
-  const impactColor = {'利好':'#00a05a','利空':'#e53935','中性':'#5c6b7f','关注':'#f5a623'};
-  const newsHtml = (c.newsItems && c.newsItems.length) ?
-    '<div class="kv" style="align-items:flex-start;"><div class="k">重大消息</div><div class="v">'+
-    c.newsItems.map(n=>
-      '<div style="border:1px solid '+(n.major?'#e53935':'#dfe8f2')+';'+(n.major?'background:#fff5f4;':'background:#f8fbff;')+'border-radius:8px;padding:9px 12px;margin-bottom:8px;">'+
-      '<div style="font-weight:600;line-height:1.6;">'+(n.major?'<span style="color:#e53935;">★ </span>':'')+n.title+'</div>'+
-      '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;font-size:11px;">'+
-      '<span class="badge" style="background:#eef2f7;color:#5c6b7f;">🕐 '+n.date+'</span>'+
-      '<span class="badge" style="background:#eef2f7;color:#5c6b7f;">📰 '+n.src+'</span>'+
-      '<span class="badge" style="background:'+(impactColor[n.impact]||'#5c6b7f')+'22;color:'+(impactColor[n.impact]||'#5c6b7f')+';">'+n.impact+'</span>'+
-      '<span class="badge" style="background:#e3ecf6;color:#0f4c81;">'+n.horizon+'</span></div>'+
-      '<div style="margin-top:6px;font-size:12px;color:#33475e;line-height:1.7;border-top:1px dashed #dfe8f2;padding-top:6px;"><b style="color:#0f4c81;">影响判断：</b>'+n.judgment+'</div></div>'
-    ).join('')+'</div></div>' : '';
-  document.getElementById('co-modal-body').innerHTML =
-    '<h3>'+c.name+'</h3><span class="ct" style="font-size:12px;color:#1976d2;background:#eef3f8;padding:2px 10px;border-radius:10px;">'+c.track+'</span>'+
-    (c.alerts?'<div class="alert-row" style="margin-top:8px;">'+c.alerts.map(a=>'<span class="alert-tag '+a.type+'" title="'+a.note+'">'+a.label+'</span>').join('')+'</div>':'')+
-    '<div style="margin-top:12px;">'+
-    '<div class="kv"><div class="k">今日表现</div><div class="v">'+fmtChg(c.today)+(c.close?'　收盘 '+c.close:'')+' <span style="color:#98a7b9;font-size:11px;">（'+D.meta.date+'）</span></div></div>'+
-    (c.flow?'<div class="kv"><div class="k">主力净流入</div><div class="v"><b style="color:'+(c.flow.main>=0?'#e53935':'#00a05a')+'">'+(c.flow.main>=0?'+':'')+c.flow.main+'亿元</b>（净比'+(c.flow.pct>=0?'+':'')+c.flow.pct+'%）　超大单 '+(c.flow.super>=0?'+':'')+c.flow.super+'亿 / 大单 '+(c.flow.big>=0?'+':'')+c.flow.big+'亿 <span style="color:#98a7b9;font-size:11px;">（东方财富，'+c.flow.date+'）</span></div></div>':'')+
-    '<div class="kv"><div class="k">资金动向</div><div class="v">'+(c.fund||'暂无融资榜数据')+'</div></div>'+
-    '<div class="kv"><div class="k">赛道逻辑</div><div class="v">'+c.logic+'</div></div>'+
-    '<div class="kv"><div class="k">近期事件</div><div class="v">'+c.event+'</div></div>'+
-    newsHtml+
-    '<div class="kv"><div class="k">关联指数</div><div class="v">'+c.related+'</div></div></div>'+
-    '<div style="margin-top:12px;font-size:11px;color:#98a7b9;">行情：东方财富（收盘）；资金：东方财富；消息：与消息面tab同源同步。</div>';
-  document.getElementById('co-modal').classList.add('show');
-}
-
 /* ---------- 数据来源 ---------- */
 const SRC_KEY='wb_custom_sources';
 function getSources(){const c=JSON.parse(localStorage.getItem(SRC_KEY)||'[]');return D.sources.concat(c);}
@@ -2009,7 +1945,7 @@ function doQuoteRefresh(btn){
       });
     }
     // 重渲染
-    renderKline(curIdxKey);renderOv(curOvKey);renderSignals();renderCos(document.querySelector('#track-seg button.on').dataset.k);cpRenderHistory();
+    renderKline(curIdxKey);renderOv(curOvKey);renderSignals();cpRenderHistory();
 // 恢复历史仓位到输入框
 (function(){ const s = cpLoad(); if(s && typeof s.current === 'number'){ document.getElementById('cp-input').value = s.current.toFixed(1); }})();
 

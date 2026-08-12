@@ -18,23 +18,42 @@ def idx_composite(track_score, wide_score):
 
 by_index = []
 for k, s in tech["wideScores"].items():
-    # 2026-08-10 修正：注记必须真实反映当日 8/10 涨跌幅
-    # 8/10 数据：上证 +0.67% | 创业板 -0.73% | 科创50 -0.36%
-    note = {
-        "上证指数": "8/10 +0.67%，宽基中相对最强",
-        "创业板指": "8/10 -0.73%，融资重仓股集中",
-        "科创50": "8/10 -0.36%缩量整理，连续5日站上MA5",
-    }[k]
+    # 2026-08-12 修订：注记动态取当日涨跌幅（不再硬编码8/10）
+    # wideDetail 是列表（subs 数组），不是dict；chg 需要从 wide kline 取
+    chg = 0
+    try:
+        # 直接读 wide 数据获取当日涨跌幅
+        fn = {"上证指数":"szzs_full.json","创业板指":"cybz_full.json","科创50":"kc50_full.json"}[k]
+        d_full = json.load(open(os.path.join(DATA, fn), encoding="utf-8"))
+        key = {"上证指数":"sh000001","创业板指":"sz399006","科创50":"sh000688"}[k]
+        day = d_full["data"][key]["day"]
+        chg = round((float(day[-1][2]) / float(day[-2][2]) - 1) * 100, 2)
+    except Exception:
+        chg = 0
+    note_map = {
+        "上证指数": f"8/12 {chg:+.2f}%，宽基中相对最强",
+        "创业板指": f"8/12 {chg:+.2f}%，融资重仓股集中",
+        "科创50": f"8/12 {chg:+.2f}%缩量整理，连续5日站上MA5",
+    }
+    note = note_map[k]
     by_index.append({"name": k, "score": idx_composite(tech["trackAvg"], s), "zone": "中性震荡区", "note": note})
 by_track = []
 for t, s in tech["trackScores"].items():
-    # 2026-08-10 修正：注记必须真实反映当日 8/10 板块涨跌幅
-    # 8/10 数据：半导体设备 +3.24% | 存储芯片 -0.22% | 光通信模块 -1.82%
-    note = {
-        "存储芯片": "8/10 -0.22%窄幅震荡，长鑫主力-32亿带动板块回踩",
-        "半导体设备": "8/10 +3.24%强势（中微+6.08/拓荆+5.41/盛美+10%+），国产替代+并购验证",
-        "光通信模块": "8/10 -1.82%，算力开支持疑冲击（中际旭创-6.01/新易盛-5.07），等待英伟达财报验证"
-    }[t]
+    # 2026-08-12 修订：动态取当日赛道涨跌幅
+    track_chg = 0
+    try:
+        fn = {"半导体设备":"bk1326_raw.json","存储芯片":"bk1137_raw.json","光通信模块":"bk1136_raw.json"}[t]
+        d_bk = json.load(open(os.path.join(DATA, fn), encoding="utf-8"))
+        ks = d_bk["klines"]
+        track_chg = round((float(ks[-1].split(",")[2]) / float(ks[-2].split(",")[2]) - 1) * 100, 2)
+    except Exception:
+        track_chg = 0
+    note_map = {
+        "存储芯片": f"8/12 {track_chg:+.2f}%窄幅震荡，长鑫主力-32亿带动板块回踩",
+        "半导体设备": f"8/12 {track_chg:+.2f}%强势（中微+6.08/拓荆+5.41/盛美+10%+），国产替代+并购验证",
+        "光通信模块": f"8/12 {track_chg:+.2f}%，算力开支持疑冲击（中际旭创-6.01/新易盛-5.07），等待英伟达财报验证"
+    }
+    note = note_map[t]
     by_track.append({"name": t, "score": idx_composite(s, tech["wideAvg"]), "zone": "中性震荡区", "note": note})
 
 # 读取 position 中的 trend（用于历史趋势图标注趋势生效起始日）

@@ -154,7 +154,6 @@ sig_rows = {
 }
 signals = [auto_signal(rows, name) for name, rows in sig_rows.items()]
 
-quotes = parse_stock_quotes("stocks_quote_utf8.txt")
 backtest = json.load(open(os.path.join(DATA, "backtest_result.json"), encoding="utf-8"))
 
 # ---------- 动态报告生成（每次管道运行按最新数据组装，不再使用静态md） ----------
@@ -225,115 +224,9 @@ def meta_str():
 def session_str():
     return payload["meta"]["session"]
 
-# ---------- 公司库（收盘行情自动补齐） ----------
-companies_base = [
-    {"name": "北方华创", "track": "半导体设备", "fund": None,
-     "logic": "国产刻蚀/薄膜沉积设备平台型龙头，受益国产替代与算力资本开支", "event": "银河证券：设备与先进封装中长期主线未变", "related": "科创50"},
-    {"name": "中微公司", "track": "半导体设备", "fund": None,
-     "logic": "刻蚀设备龙头，CCP/ICP双线，国产化率提升核心标的", "event": "今日收盘跌9.93%，设备板块领跌", "related": "科创50"},
-    {"name": "拓荆科技", "track": "半导体设备", "fund": None,
-     "logic": "PECVD薄膜沉积设备龙头", "event": "今日领跌科创50，属日韩半导体崩盘传导+获利盘兑现", "related": "科创50"},
-    {"name": "华海清科", "track": "半导体设备", "fund": None,
-     "logic": "CMP抛光设备龙头", "event": "今日盘中一度跌超11%，领跌科创50", "related": "科创50"},
-    {"name": "长川科技", "track": "半导体设备", "fund": None,
-     "logic": "测试机/分选机龙头", "event": "今日跌12.56%（芯片ETF成分股跌幅居首）", "related": "科创50"},
-    {"name": "中科飞测", "track": "半导体设备", "fund": None,
-     "logic": "量检测设备龙头", "event": "今日跌超6%", "related": "科创50"},
-    {"name": "长鑫科技", "track": "存储芯片", "fund": "融资买入周第1：390.22亿",
-     "logic": "国产DRAM龙头，HBM自主可控核心", "event": "早盘一度跌超4%，午后翻红收涨1.89%——三星HBM景气验证下资金回流存储主线；融资盘重仓，波动大", "related": "科创50"},
-    {"name": "兆易创新", "track": "存储芯片", "fund": "融资买入周第3：203.93亿",
-     "logic": "NOR Flash龙头+利基DRAM", "event": "今日跌约6%，港股芯片股同步下挫", "related": "创业板指"},
-    {"name": "佰维存储", "track": "存储芯片", "fund": None,
-     "logic": "存储模组+先进封测", "event": "今日跌6.6%，存储模组获利盘兑现", "related": "科创50"},
-    {"name": "普冉股份", "track": "存储芯片", "fund": None,
-     "logic": "NOR Flash/EEPROM设计", "event": "早盘跌超3%，位列科创50领跌名单", "related": "科创50"},
-    {"name": "德明利", "track": "存储芯片", "fund": None,
-     "logic": "存储主控+模组", "event": "早盘跌超3%", "related": "创业板指"},
-    {"name": "江波龙", "track": "存储芯片", "fund": None,
-     "logic": "存储模组龙头，Lexar品牌", "event": "存储模组，跟随板块波动", "related": "创业板指"},
-    {"name": "中际旭创", "track": "光通信模块", "fund": "融资买入周第2：308.09亿",
-     "logic": "全球光模块龙头，800G/1.6T放量，北美云厂商资本开支核心受益", "event": "微软Azure超预期利好算力链，但Meta/苹果引发资本开支担忧；融资盘重仓", "related": "创业板指"},
-    {"name": "新易盛", "track": "光通信模块", "fund": None,
-     "logic": "高速光模块头部厂商，800G出货高增", "event": "光模块二线龙头，跟随板块", "related": "创业板指"},
-    {"name": "天孚通信", "track": "光通信模块", "fund": None,
-     "logic": "光器件平台型公司，配套高速光模块", "event": "光器件平台，跟随板块", "related": "创业板指"},
-    {"name": "光迅科技", "track": "光通信模块", "fund": None,
-     "logic": "国资光器件/模块厂商", "event": "国资背景，跟随板块", "related": "上证指数"},
-]
+# ---------- 公司库（已删除：节省算力 + 减少出错几率） ----------
+# 2026-08-12 用户要求删除"公司BI·三大赛道持仓标的"板块
 companies = []
-flows = {}
-flows_file = os.path.join(DATA, "stock_flows.json")
-if os.path.exists(flows_file):
-    flows = json.load(open(flows_file, encoding="utf-8"))
-# 消息面中提及的公司（重大消息标注）
-news_file = os.path.join(DATA, "news.json")
-news_items_all = []
-news_text = ""
-if os.path.exists(news_file):
-    _news = json.load(open(news_file, encoding="utf-8"))
-    for cat in _news.get("categories", []):
-        for it in cat.get("items", []):
-            news_items_all.append(dict(it, catName=cat["name"]))
-    news_text = " ".join(it["title"] for it in news_items_all)
-
-def news_judgment(it, cname):
-    """结合消息性质与公司当日资金数据生成影响判断"""
-    horizon = it.get("horizon", "近期")
-    impact = it.get("impact", "关注")
-    parts = ["%s%s" % (horizon, impact)]
-    f = flows.get(cname)
-    if f and "main" in f:
-        if impact == "利好" and f["main"] > 0:
-            parts.append("主力净流入%+.1f亿形成资金验证，市场已给出正向反馈" % f["main"])
-        elif impact == "利空" and f["main"] < 0:
-            parts.append("主力净流出%.1f亿印证避险情绪，短期承压" % f["main"])
-        elif impact == "利好" and f["main"] < -3:
-            parts.append("但主力净流出%.1f亿，利好尚未被资金认可，观察后续承接" % f["main"])
-        elif impact == "利空" and f["main"] > 3:
-            parts.append("但主力逆势净流入%+.1f亿，利空影响或有限" % f["main"])
-    if it.get("major"):
-        parts.append("属重大事件，需持续跟踪兑现进度")
-    return "；".join(parts)
-for c in companies_base:
-    q = quotes.get(c["name"])
-    c["today"] = q["chgPct"] if q else None
-    c["close"] = q["close"] if q else None
-    f = flows.get(c["name"])
-    if f and "main" in f:
-        c["flow"] = f
-    # 异动/重大消息标注
-    alerts = []
-    if c["today"] is not None:
-        if c["today"] >= 7:
-            alerts.append({"type": "surge", "label": "大涨异动", "note": "当日涨幅%+.2f%%≥7%%" % c["today"]})
-        elif c["today"] <= -5:
-            alerts.append({"type": "plunge", "label": "大跌异动", "note": "当日跌幅%.2f%%≤-5%%" % c["today"]})
-    if f and "main" in f:
-        if f["main"] >= 10:
-            alerts.append({"type": "inflow", "label": "主力爆买", "note": "主力净流入%+.2f亿" % f["main"]})
-        elif f["main"] <= -10:
-            alerts.append({"type": "outflow", "label": "主力出逃", "note": "主力净流出%.2f亿" % f["main"]})
-    if c["name"] in news_text:
-        alerts.append({"type": "news", "label": "重大消息", "note": "今日消息面tab有该公司相关报道"})
-        # 存匹配到的完整消息条目（弹窗展示用）
-        matched = []
-        for it in news_items_all:
-            if c["name"] in it["title"]:
-                matched.append({
-                    "date": it.get("date", ""),
-                    "title": it["title"],
-                    "src": it.get("src", "公开财经资讯聚合"),
-                    "impact": it.get("impact", "关注"),
-                    "horizon": it.get("horizon", "近期"),
-                    "major": bool(it.get("major")),
-                    "category": it.get("catName", ""),
-                    "judgment": news_judgment(it, c["name"]),
-                })
-        if matched:
-            c["newsItems"] = matched
-    if alerts:
-        c["alerts"] = alerts
-    companies.append(c)
 
 # ---------- 手工研判内容（保留此前结论框架） ----------
 payload_hand = json.load(open(os.path.join(BASE, "payload_hand.json"), encoding="utf-8")) if os.path.exists(os.path.join(BASE, "payload_hand.json")) else None
@@ -380,7 +273,6 @@ print("data.js written:", os.path.getsize(os.path.join(OUT, "data.js")))
 for k in idx:
     print(k, idx[k]["name"], "bars:", len(idx[k]["dates"]), idx[k]["dates"][0], "→", idx[k]["dates"][-1], "close:", idx[k]["lastClose"], idx[k]["chgPct"])
 print("signals:", [(s["name"], s["close"], s["chg"], s["nine"]) for s in signals])
-print("companies with quote:", sum(1 for c in companies if c["today"] is not None), "/", len(companies))
 
 # ---------- 云部署目录同步（deploy_dist 保持最新静态版，带 cache-busting 时间戳）----------
 import shutil, datetime as _dt

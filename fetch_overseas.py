@@ -312,35 +312,40 @@ if hist_us_ndx:
 else:
     print(f"  us.NDX 历史拉取失败，保留 {os.path.exists(ndx_fp)} 文件")
 # 用新浪实时覆盖最后bar
-sina = fetch_sina(["gb_$ndx"])
-if sina.get("gb_$ndx"):
-    s = sina["gb_$ndx"]
-    # 关键：用 sina date 字段解析美股交易日，不用 datetime.now()
-    ndx_close_date = parse_us_market_date(s.get("date", ""))
-    if not ndx_close_date:
-        ndx_close_date = datetime.now().strftime("%Y-%m-%d")
-    payload = json.load(open(ndx_fp, encoding="utf-8"))
-    day = payload.get("data", {}).get("us.NDX", {}).get("day") or payload.get("data", {}).get("us.NDX", {}).get("qfqday")
-    if day is None:
-        # file 缺失或结构异常，跳过
-        print(f"  ndx100_full.json 结构异常，跳过写入")
-    else:
-        # 找到最后一个 <= ndx_close_date 的 bar，覆盖其收盘
-        written = False
-        for i in range(len(day) - 1, -1, -1):
-            if day[i][0] <= ndx_close_date:
-                day[i][2] = "%.2f" % s["price"]  # 收
-                day[i][3] = "%.2f" % s["high"]  # 高
-                day[i][4] = "%.2f" % s["low"]   # 低
-                day[i][1] = "%.2f" % s["open"] # 开
-                written = True
-                print(f"  新浪NDX覆盖最近bar: {day[i][0]} {s['price']:.2f}")
-                break
-        if not written:
-            # 添加新bar
-            day.append([ndx_close_date, "%.2f" % s["open"], "%.2f" % s["price"],
-                        "%.2f" % s["high"], "%.2f" % s["low"], "0", "{}", "0.00", "0", "0", "0"])
-            print(f"  新浪NDX追加新bar: {ndx_close_date} {s['price']:.2f}")
+    sina = fetch_sina(["gb_$ndx"])
+    if sina.get("gb_$ndx"):
+        s = sina["gb_$ndx"]
+        # 关键：用 sina date 字段解析美股交易日，不用 datetime.now()
+        ndx_close_date = parse_us_market_date(s.get("date", ""))
+        if not ndx_close_date:
+            ndx_close_date = datetime.now().strftime("%Y-%m-%d")
+        payload = json.load(open(ndx_fp, encoding="utf-8"))
+        day = payload.get("data", {}).get("us.NDX", {}).get("day") or payload.get("data", {}).get("us.NDX", {}).get("qfqday")
+        if day is None:
+            # file 缺失或结构异常，跳过
+            print(f"  ndx100_full.json 结构异常，跳过写入")
+        else:
+            # 新浪secid字段说明：
+            # parts[2] = 涨跌幅(%)；parts[3] = 北京时间日期时间；parts[30] = 昨收（数字，即上日收盘）
+            # parts[34] = 成交额；parts[5] = 今开；parts[6] = 最高；parts[7] = 最低；parts[1] = 最新价
+            prev_close = s.get("prev")  # 上日收盘
+            # 关键修复：若最后bar日期不是 ndx_close_date（说明last bar是上日的），则追加新bar
+            # 同时把 last bar 的 close 修正为上日收盘价（prev_close）
+            if day[-1][0] < ndx_close_date:
+                # 修正 last bar 的 close 为上日收盘价（如果当前last bar是上日）
+                if prev_close and day[-1][0] < ndx_close_date:
+                    day[-1][2] = "%.2f" % prev_close
+                # 追加 ndx_close_date bar
+                day.append([ndx_close_date, "%.2f" % s["open"], "%.2f" % s["price"],
+                            "%.2f" % s["high"], "%.2f" % s["low"], "0", "{}", "0.00", "0", "0", "0"])
+                print(f"  新浪NDX追加新bar: {ndx_close_date} {s['price']:.2f} (修正上日close={prev_close:.2f})")
+            elif day[-1][0] == ndx_close_date:
+                # 已经是当日bar，覆盖
+                day[-1][2] = "%.2f" % s["price"]  # 收
+                day[-1][3] = "%.2f" % s["high"]  # 高
+                day[-1][4] = "%.2f" % s["low"]   # 低
+                day[-1][1] = "%.2f" % s["open"] # 开
+                print(f"  新浪NDX覆盖当日bar: {day[-1][0]} {s['price']:.2f}")
         if "qfqday" in payload.get("data", {}).get("us.NDX", {}):
             qf = payload["data"]["us.NDX"]["qfqday"]
             qf[:len(day)] = day
