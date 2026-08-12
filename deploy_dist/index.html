@@ -196,6 +196,7 @@ button.btn.ghost:hover{background:#e0e7ef;}
 .toast .tt{font-weight:700;color:var(--brand);margin-bottom:4px;}
 .toast .tb{font-size:12.5px;color:var(--sub);line-height:1.6;}
 @keyframes slidein{from{transform:translateX(40px);opacity:0;}to{transform:none;opacity:1;}}
+@keyframes fusePulse{0%,100%{background:linear-gradient(90deg,#fff3e0,#ffebee);}50%{background:linear-gradient(90deg,#ffe0b2,#ffcdd2);}}
 footer{text-align:center;color:#93a3b5;font-size:11.5px;padding:26px 0 10px;line-height:1.8;}
 .section-note{font-size:12px;color:var(--sub);margin:-8px 0 14px;line-height:1.7;}
 .bt-good{color:var(--green);font-weight:700;} .bt-bad{color:var(--red);font-weight:700;} .bt-mid{color:var(--amber);font-weight:700;}
@@ -582,7 +583,7 @@ html,body{overflow-x:hidden;}
 
 <div class="toast" id="toast"><div class="tt" id="toast-t"></div><div class="tb" id="toast-b"></div></div>
 
-<script src="data.js?v=202608121332"></script>
+<script src="data.js?v=202608122259"></script>
 <script src="collab.js?v=20260811185230"></script>
 <script>
 const D = window.DASHBOARD_DATA;
@@ -1048,6 +1049,43 @@ function renderSnapshots(){
       });
     }
   });
+  // 2026-08-12 修订：从 P.trendJudgments 渲染所有历史趋势判定/变更标注（永不删除）
+  // 类型：judgment(初始判定,青绿色) | trend(变更,红色) | active(生效起始,橙色)
+  if(P.trendJudgments && P.trendJudgments.length){
+    const usedDates = new Set();
+    P.trendJudgments.forEach((m, mi)=>{
+      // 找到对应快照索引
+      let idx = recentSnaps.findIndex(s => s.time.startsWith(m.date));
+      if(idx < 0){
+        // fallback：找不超过 m.date 的最近索引
+        for(let i=0; i<recentSnaps.length; i++){
+          if(recentSnaps[i].time.slice(0,10) <= m.date) idx = i;
+          else break;
+        }
+      }
+      if(idx < 0) return;
+      // 避免与现有markLine重复标注（同一日期）
+      const dateKey = m.date;
+      if(usedDates.has(dateKey+'#'+m.type)) return;
+      usedDates.add(dateKey+'#'+m.type);
+      // 类型映射：颜色 + 标签
+      let color='#00897b', fontSize=8, fontWeight=600, position='middle';
+      if(m.type === 'trend'){ color='#e53935'; fontSize=9; fontWeight=700; position='start'; }
+      else if(m.type === 'active'){ color='#ff9800'; fontSize=9; fontWeight=700; position='end'; }
+      else if(m.type === 'judgment'){ color='#00897b'; fontSize=9; fontWeight=700; position='start'; }
+      const displayText = (m.label||'') + ' ' + (m.text||'');
+      markLineData.push({
+        xAxis: idx,
+        lineStyle: {color: color, type:'dashed', width: m.type==='trend'?2:1.5},
+        label: {
+          show:true, position: position, distance: 6 + mi*4,
+          formatter: displayText,
+          color: color, fontSize: fontSize, fontWeight: fontWeight,
+          backgroundColor:'rgba(255,255,255,0.85)', padding:[2,4]
+        }
+      });
+    });
+  }
   const trendMarkLine = markLineData.length ? {
     silent: true,
     symbol: 'none',
@@ -1202,7 +1240,7 @@ function renderPosition(){
       '<span id="pos-ack-status" style="color:#5c6b7f;"></span>'+
     '</div>'+
     '<div id="pos-ack-history" style="padding:8px 16px;border-top:1px solid #eef2f7;background:#fafcfe;font-size:11.5px;color:#5c6b7f;line-height:1.7;"></div>'+
-    (P.fuseHit?'<div style="padding:8px 16px;background:#fff8ec;border-top:1px solid #f5a623;font-size:12px;color:#a07400;">⚠️ 反弹熔断已触发：'+P.fuseHit+'</div>':'')+
+    (P.fuseHit?'<div style="padding:10px 18px;background:linear-gradient(90deg,#fff3e0,#ffebee);border-top:2px solid #e53935;border-bottom:2px solid #e53935;font-size:13px;color:#b71c1c;font-weight:700;animation:fusePulse 2s infinite;"><span style="display:inline-block;background:#e53935;color:#fff;padding:3px 10px;border-radius:4px;margin-right:8px;font-size:12.5px;">🚨 反弹熔断已触发</span>'+P.fuseHit+'　<span style="font-weight:400;color:#a07400;font-size:11.5px;">（停止减仓，等待反弹确认）</span></div>':'')+
     '<div style="padding:8px 16px;border-top:1px solid #eef2f7;background:#fafcfe;font-size:11px;color:#98a7b9;line-height:1.7;">'+
       '执行规则：T日收盘判定→T+1按净值执行；同方向微调冷却7个自然日，趋势切换不受限；|差额|＜0.5成不动；仅跨趋势/跨档位触发；硬约束1~9成；优先级：趋势切换＞子阶段切换＞打分档位。</div>'+
     '<div style="padding:10px 16px;border-top:1px solid #eef2f7;">'+

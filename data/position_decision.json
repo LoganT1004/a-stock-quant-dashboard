@@ -1,22 +1,49 @@
 {
  "date": "2026-08-12",
  "execDate": "2026-08-13",
- "intraday": true,
+ "intraday": false,
  "trend": "bottom",
  "trendName": "震荡市·低位摸底",
  "trendRaw": "bottom",
  "center": 6,
  "trendSince": "2026-08-12",
- "trendReason": "GMMA短期组从下方靠拢长期组+ADX＜20（18.6）｜低位磨底博弈，无明确趋势",
+ "trendReason": "",
  "trendStartDate": "2026-08-12",
- "trendStartIdx": 322,
+ "trendStartIdx": 389,
  "alertActive": false,
  "alertReason": "",
- "changeMarkers": [
+ "changeMarkers": [],
+ "trendJudgments": [
+  {
+   "type": "judgment",
+   "date": "2026-08-04",
+   "label": "【趋势初始判定】",
+   "text": "初始判定：中位横盘震荡",
+   "color": "#00897b",
+   "to": "mid"
+  },
   {
    "type": "trend",
+   "date": "2026-08-11",
    "label": "【趋势变更】",
    "text": "中位横盘震荡 → 震荡市·低位摸底",
+   "color": "#e53935",
+   "from": "mid",
+   "to": "bottom"
+  },
+  {
+   "type": "active",
+   "date": "2026-08-12",
+   "label": "【低位摸底生效】",
+   "text": "低位摸底生效起始",
+   "color": "#ff9800",
+   "to": "bottom"
+  },
+  {
+   "type": "trend",
+   "date": "2026-08-12",
+   "label": "【趋势变更】",
+   "text": "震荡市·中位横盘 → 震荡市·低位摸底",
    "color": "#e53935",
    "from": "mid",
    "to": "bottom"
@@ -28,12 +55,12 @@
     "name": "GMMA短期组斜率",
     "value": "→",
     "showVals": [
-     1723.84,
-     1715.8,
-     1709.75,
-     1711.52,
-     1716.46,
-     1726.9
+     1726.84,
+     1717.8,
+     1711.08,
+     1712.61,
+     1717.38,
+     1727.65
     ],
     "rule": "↑=短期资金流入；↓=短期资金流出；→=持平"
    },
@@ -41,12 +68,12 @@
     "name": "GMMA长期组斜率",
     "value": "→",
     "showVals": [
-     1770.71,
-     1776.38,
-     1778.39,
-     1777.59,
-     1774.7,
-     1764.76
+     1771.1,
+     1776.71,
+     1778.68,
+     1777.85,
+     1774.94,
+     1764.96
     ],
     "rule": "↑=主线趋势向上；↓=主线趋势向下；→=持平"
    },
@@ -79,96 +106,96 @@
   "aux": [
    {
     "name": "布林上轨/中轨/下轨",
-    "value": "1900.76/1725.61/1550.46",
-    "rule": "轨位52%（低位）｜收口缩窄｜波动收窄，临近方向选择"
+    "value": "1901.11/1725.91/1550.7",
+    "rule": "轨位53%（低位）｜收口缩窄｜波动收窄，临近方向选择"
    },
    {
     "name": "MA5/MA20 中期结构",
-    "value": "1724.72/1725.61",
+    "value": "1725.91/1725.91",
     "rule": "MA5在MA20下方，中期空头结构"
    },
    {
     "name": "MA5 短期变化",
-    "value": "+0.36%",
+    "value": "+0.64%",
     "rule": "站上MA5，短期反弹"
    },
    {
     "name": "MACD DIF/DEA",
-    "value": "-46.5/-54.51",
+    "value": "-46.02/-54.41",
     "rule": "金叉｜零轴下方｜零轴下金叉=弱势反弹，底背离"
    },
    {
     "name": "当日量比",
-    "value": 0.59,
-    "rule": "≥1.2放量｜0.8-1.2正常｜<0.8缩量｜缩量｜位置判定（结构优先：低位缩量整理，抛压逐步衰竭，磨底特征（偏多信号））"
+    "value": 0.82,
+    "rule": "≥1.2放量｜0.8-1.2正常｜<0.8缩量｜正常｜位置判定（结构优先：量能中性）"
    },
    {
     "name": "5日均量比",
-    "value": 0.66,
-    "rule": "持续缩量，观望气氛浓｜与当日量比互证"
+    "value": 0.86,
+    "rule": "未持续放量，趋势未确认｜与当日量比互证"
    }
   ]
  },
  "trackRecs": {
   "primary": {
    "track": "半导体设备",
-   "score": 66.8,
+   "score": 60.8,
    "amount": 1.2,
    "action": "减仓",
    "slot": "【优先减仓】",
-   "logic": "技术面：中性震荡 ｜ 综合分位：强势区 ｜ 消息面：无显著边际 ｜ 【优先减仓】减仓1.2成"
+   "logic": "技术面：中性震荡 ｜ 综合分位：中性偏强 ｜ 消息面：无显著边际 ｜ 【优先减仓】减仓1.2成"
   },
   "secondary": {
    "track": "存储芯片",
-   "score": 66.8,
+   "score": 60.8,
    "amount": 0.8,
    "action": "减仓",
    "slot": "【次选减仓】",
-   "logic": "技术面：中性震荡 ｜ 综合分位：强势区 ｜ 消息面：+2分催化 ｜ 【次选减仓】减仓0.8成"
+   "logic": "技术面：中性震荡 ｜ 综合分位：中性偏强 ｜ 消息面：无显著边际 ｜ 【次选减仓】减仓0.8成"
   },
   "hold": [
    {
     "track": "光通信模块",
-    "score": 66.8,
+    "score": 60.8,
     "amount": 0,
     "action": "维持",
     "slot": "【维持】",
-    "logic": "技术面：中性震荡 ｜ 综合分位：强势区 ｜ 消息面：无显著边际 ｜ 【维持】维持当前配置"
+    "logic": "技术面：中性震荡 ｜ 综合分位：中性偏强 ｜ 消息面：无显著边际 ｜ 【维持】维持当前配置"
    }
   ]
  },
  "signals": {
-  "close": 1731.0,
-  "ma5": 1724.72,
-  "ma20": 1725.61,
+  "close": 1736.99,
+  "ma5": 1725.91,
+  "ma20": 1725.91,
   "gmma": "converging_low",
   "adx": 18.64,
   "pdi": 20.07,
   "mdi": 23.57,
-  "bb_mid": 1725.61,
-  "bb_lo": 1550.46,
-  "bb_up": 1900.76,
-  "bb_pct": 0.515,
-  "volRatio": 0.59,
+  "bb_mid": 1725.91,
+  "bb_lo": 1550.7,
+  "bb_up": 1901.11,
+  "bb_pct": 0.532,
+  "volRatio": 0.82,
   "divBottom": true,
   "divTop": false,
   "strength": "neutral",
   "ruleVersion": "v3.1-顾比GMMA+ADX+布林带+量价·全量显性化"
  },
- "score": 60.5,
+ "score": 58.5,
  "zone": "中性",
  "target": 6,
  "current": 8.0,
  "diff": -2.0,
  "action": "不动",
  "execAmount": 0.0,
- "note": "观察期第3/5日",
+ "note": "同区间波动不重复调仓",
  "userAcked": false,
  "pendingAction": null,
- "alignPhase": 1,
+ "alignPhase": 2,
  "fuseHit": null,
  "cooldown": false,
- "trendChanged": true,
+ "trendChanged": false,
  "mapTable": {
   "极致强底部": {
    "up": 9,

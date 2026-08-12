@@ -610,6 +610,46 @@ def main():
             "color": "#e53935",
             "from": prev_trend_s, "to": trend
         })
+
+    # 趋势持久化标注（初始判定 + 所有变更，跨运行累积，永不删除）
+    # 2026-08-12 修订：图上需保留所有出现过的趋势判定/变更标注
+    trend_judgments = state.get("trend_judgments", [])
+    if not prev_trend_s and not trend_judgments:
+        # 首次运行：记录初始趋势判定
+        trend_judgments.append({
+            "type": "judgment",
+            "date": trend_start_date or today,
+            "label": "【趋势初始判定】",
+            "text": f"初始判定：{TREND_NAME.get(trend, trend)}",
+            "color": "#00897b",  # 青色，区别于变更标注
+            "to": trend
+        })
+    if prev_trend_s and prev_trend_s != trend:
+        # 新增变更标注（去重：同一日期同类型不重复）
+        existing_dates = {m.get("date") for m in trend_judgments if m.get("type") == "trend"}
+        if today not in existing_dates:
+            trend_judgments.append({
+                "type": "trend",
+                "date": today,
+                "label": "【趋势变更】",
+                "text": f"{TREND_NAME.get(prev_trend_s, prev_trend_s)} → {TREND_NAME.get(trend, trend)}",
+                "color": "#e53935",
+                "from": prev_trend_s,
+                "to": trend
+            })
+    # 同时记录当前趋势生效起始日标注
+    if trend_start_date and trend_start_date != today:
+        existing = {m.get("date") for m in trend_judgments if m.get("type") == "active"}
+        if trend_start_date not in existing:
+            trend_judgments.append({
+                "type": "active",
+                "date": trend_start_date,
+                "label": f"【{TREND_NAME.get(trend, trend)}生效】",
+                "text": f"{TREND_NAME.get(trend, trend)}生效起始",
+                "color": "#ff9800",
+                "to": trend
+            })
+    state["trend_judgments"] = trend_judgments
     # 趋势确认日期与理由（与上次prev_trend对比）
     trend_since = state.get("trend_since") or today
     trend_reason = ""
@@ -939,6 +979,7 @@ def main():
         "trendStartDate": trend_start_date, "trendStartIdx": trend_start_idx,
         "alertActive": bool(alert_active), "alertReason": alert_reason,
         "changeMarkers": change_markers,
+        "trendJudgments": state.get("trend_judgments", []),  # 2026-08-12 修订：所有历史趋势判定/变更标注（永不删除）
         "indicatorDetail": indicator_detail,
         "trackRecs": track_recs,
         "signals": {
