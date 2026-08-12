@@ -503,8 +503,9 @@ try:
     if r.returncode != 0:
         print("  fetch_daily_data.py 异常: %s" % (r.stderr or "")[-200:])
 
-    # ==================== 5) 依次跑涨跌停→评分→payload→风控→整合→论证→仓位→生成 ====================
+    # ==================== 5) 依次跑涨跌停→消息面→评分→payload→风控→整合→论证→仓位→生成 ====================
     for step, script in [("更新涨跌停家数", "fetch_limit_count.py"),
+                         ("刷新消息面时间戳", "fetch_news.py"),
                          ("重算评分体系", "score_engine.py"), ("生成评分payload", "make_score_payload.py"),
                          ("合并补充数据", "update_hand_extra.py"), ("风控检测", "risk_engine.py"),
                          ("整合风控结论", "integrate_risk.py"), ("生成动态论证", "gen_argument.py"),
