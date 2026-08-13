@@ -286,18 +286,18 @@
   "sigBrief": "九转计数：上证-/创业板-/科创50-；综合63.9分（中性震荡区）"
  },
  {
-  "time": "2026-08-13 15:29",
+  "time": "2026-08-13 16:09",
   "label": "收盘",
-  "composite": 60.5,
+  "composite": 60.0,
   "zone": "中性震荡区",
-  "tech": 60.0,
+  "tech": 58.7,
   "overseas": 62.1,
   "capital": 51.5,
-  "fund": 68.3,
+  "fund": 70.3,
   "extras": 0,
-  "trend": "bottom",
-  "trendName": "震荡市·低位摸底",
-  "trendStartDate": "2026-08-12",
-  "sigBrief": "九转计数：上证-/创业板-/科创50-；综合60.5分（中性震荡区）"
+  "trend": "mid",
+  "trendName": "震荡市·中位横盘",
+  "trendStartDate": "2026-08-13",
+  "sigBrief": "九转计数：上证-/创业板-/科创50-；综合60.0分（中性震荡区）"
  }
 ]

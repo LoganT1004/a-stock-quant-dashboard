@@ -96,8 +96,15 @@ def fetch():
         })
         print("涨停=%d 跌停=%d（扫描 %d 只）" % (up, down, seen))
     except Exception as e:
-        print("涨跌停 API 失败: %s，保留旧值" % str(e)[:120])
-        out["src"] = (out.get("src", "") + " [API失败，保留旧值]").strip()
+        # 2026-08-13 修订：API 失败时不再追加 "[API失败，保留旧值]" 到 src 字段
+        # 避免多次失败后 src 字段堆叠一长串；用户明确要求只显示数量
+        print("涨跌停 API 失败: %s，保留旧值（涨停=%d 跌停=%d）" % (
+            str(e)[:80], out.get("limit_up", 0), out.get("limit_down", 0)))
+        # 仅在第一次失败时设置简洁的失败提示
+        if not out.get("src") or "保留旧值" in out.get("src", ""):
+            out["src"] = "东方财富 push2 clist（API失败·保留旧值）"
+        else:
+            out["src"] = out.get("src", "东方财富 push2 clist")
         if "date" not in out:
             out["date"] = datetime.now().strftime("%Y-%m-%d")
     return out

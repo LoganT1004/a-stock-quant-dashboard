@@ -559,6 +559,16 @@
    "action": "不动",
    "amount": 0.0,
    "acked": false
+  },
+  {
+   "date": "2026-08-13",
+   "trend": "mid",
+   "zone": "中性",
+   "score": 60.5,
+   "target": 5,
+   "action": "不动",
+   "amount": 0.0,
+   "acked": false
   }
  ],
  "user_acked": false,

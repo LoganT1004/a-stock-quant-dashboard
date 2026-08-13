@@ -41,17 +41,20 @@ by_track = []
 for t, s in tech["trackScores"].items():
     # 2026-08-12 修订：动态取当日赛道涨跌幅
     track_chg = 0
+    track_date = ""
     try:
         fn = {"半导体设备":"bk1326_raw.json","存储芯片":"bk1137_raw.json","光通信模块":"bk1136_raw.json"}[t]
         d_bk = json.load(open(os.path.join(DATA, fn), encoding="utf-8"))
         ks = d_bk["klines"]
         track_chg = round((float(ks[-1].split(",")[2]) / float(ks[-2].split(",")[2]) - 1) * 100, 2)
+        track_date = ks[-1].split(",")[0].replace("2026-", "").replace("-", "/")
     except Exception:
         track_chg = 0
+        track_date = "8/12"
     note_map = {
-        "存储芯片": f"8/12 {track_chg:+.2f}%窄幅震荡，长鑫主力-32亿带动板块回踩",
-        "半导体设备": f"8/12 {track_chg:+.2f}%强势（中微+6.08/拓荆+5.41/盛美+10%+），国产替代+并购验证",
-        "光通信模块": f"8/12 {track_chg:+.2f}%，算力开支持疑冲击（中际旭创-6.01/新易盛-5.07），等待英伟达财报验证"
+        "存储芯片": f"{track_date} {track_chg:+.2f}%窄幅震荡，长鑫主力-32亿带动板块回踩",
+        "半导体设备": f"{track_date} {track_chg:+.2f}%强势（中微+6.08/拓荆+5.41/盛美+10%+），国产替代+并购验证",
+        "光通信模块": f"{track_date} {track_chg:+.2f}%，算力开支持疑冲击（中际旭创-6.01/新易盛-5.07），等待英伟达财报验证"
     }
     note = note_map[t]
     by_track.append({"name": t, "score": idx_composite(s, tech["wideAvg"]), "zone": "中性震荡区", "note": note})

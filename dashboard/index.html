@@ -564,7 +564,7 @@ html,body{overflow-x:hidden;}
 
 <div class="toast" id="toast"><div class="tt" id="toast-t"></div><div class="tb" id="toast-b"></div></div>
 
-<script src="data.js?v=202608131536"></script>
+<script src="data.js?v=202608131609"></script>
 <script src="collab.js?v=20260811185230"></script>
 <script>
 const D = window.DASHBOARD_DATA;
@@ -1520,11 +1520,11 @@ function renderEtfChart(){
         lineStyle:{width:2,color:'#0f4c81'},areaStyle:{color:'rgba(15,76,129,0.06)'}}]}, true);
   renderInsight('insight-etf', 'etf-chart');
   document.getElementById('etf-text').innerHTML =
-    '数据源：东方财富权益ETF日报<br>最新一日（<b>'+last_date+'</b>）净申购：<b style="color:'+(last_net3d>=0?'#e53935':'#00a05a')+'">'+(last_net3d>=0?'+':'')+last_net3d.toFixed(1)+'亿</b><br>'+
+    '数据源：新浪财经+今日头条ETF日报（替代东方财富Choice日报）<br>最新一日（<b>'+last_date+'</b>）净申购：<b style="color:'+(last_net3d>=0?'#e53935':'#00a05a')+'">'+(last_net3d>=0?'+':'')+last_net3d.toFixed(1)+'亿</b><br>'+
     '近3日滚动合计：<b style="color:'+(last_net3d>=0?'#e53935':'#00a05a')+'">'+(last_net3d>=0?'+':'')+last_net3d.toFixed(0)+'亿</b><br>'+
     '近7日累计：<b>'+(last_net7d>=0?'+':'')+last_net7d.toFixed(0)+'亿</b> ｜ 30日累计：<b>'+(last_net30d>=0?'+':'')+last_net30d.toFixed(0)+'亿</b><br>'+
     '当前资金面权重分（资金面25%×80%=<b>20分</b>贡献）<br>'+
-    '<span style="font-size:11px;color:#98a7b9;">注：数据自'+H.dates[0]+'起每日自动累积，每日管道运行后由消息面自动化追加。</span>';
+    '<span style="font-size:11px;color:#98a7b9;">注：数据自'+H.dates[0]+'起每日自动累积（2026-08-13 起改用新浪+今日头条ETF日报）。</span>';
 }
 document.querySelectorAll('#etf-range button').forEach(b=>b.onclick=()=>{
   document.querySelectorAll('#etf-range button').forEach(x=>x.classList.remove('on'));
