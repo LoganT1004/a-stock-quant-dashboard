@@ -1,10 +1,31 @@
 name: auto-refresh
+
 on:
+  # 手动触发（可选：跳过数据抓取，直接部署本地已 commit 的数据）
   workflow_dispatch:
+    inputs:
+      skip_refresh:
+        description: '跳过数据抓取（仅部署本地数据）'
+        required: false
+        type: boolean
+        default: false
+  # 本地 push 触发：自动部署本地数据
+  push:
+    branches: [master]
+    paths:
+      - 'deploy_dist/**'
+      - 'data/**'
+      - '.github/workflows/main.yml'
+  # 定时抓取（schedule 本身有延迟/丢失问题，但必须保留）
   schedule:
     - cron: '30 3 * * 1-5'   # 北京时间 11:30（午盘）
     - cron: '30 7 * * 1-5'   # 北京时间 15:30（收盘后30分钟，避开整点高峰）
     - cron: '45 8 * * 1-5'   # 北京时间 16:45（收盘兜底，防止15:30的cron被GitHub延迟/丢弃）
+
+# 防止并发触发
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   refresh:
@@ -16,13 +37,43 @@ jobs:
       id-token: write
     steps:
       - uses: actions/checkout@v5
+        with:
+          fetch-depth: 1
+
       - uses: actions/setup-python@v6
         with:
           python-version: '3.11'
-      - name: Run pipeline
-        run: python quick_refresh.py
-      - name: Deploy
+
+      # 数据抓取：手动 + schedule 触发时执行；push 触发跳过（直接部署本地数据）
+      - name: Run pipeline (data refresh)
+        if: github.event_name != 'push' && (github.event_name != 'workflow_dispatch' || !inputs.skip_refresh)
+        run: |
+          echo ">>> 开始抓取数据（触发方式：${{ github.event_name }}）<<<"
+          python quick_refresh.py 2>&1 | tail -30
+        continue-on-error: true  # 即使抓取失败也继续部署
+
+      - name: Deploy to GitHub Pages
+        run: |
+          echo ">>> 部署 deploy_dist/ 到 gh-pages 分支 <<<"
+          # 检查 deploy_dist 是否存在
+          if [ ! -f "deploy_dist/data.js" ]; then
+            echo "❌ deploy_dist/data.js 不存在，跳过部署"
+            exit 1
+          fi
+          # 显示当前 meta 信息
+          echo "当前 meta.date:"
+          python -c "import re,json; s=open('deploy_dist/data.js',encoding='utf-8').read(); s=re.sub(r'^window\\.DASHBOARD_DATA\\s*=\\s*','',s).strip().rstrip(';').strip(); d=json.loads(s); print('  meta.date:', d['meta']['date']); print('  session:', d['meta']['session'])"
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./deploy_dist
+          enable_jekyll: false
+          keep_files: false
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "### GitHub Pages 部署完成 ✅"
+          echo "- 触发方式：${{ github.event_name }}"
+          echo "- 触发 commit：${{ github.sha }}"
+          echo "- 部署地址：https://logant1004.github.io/a-stock-quant-dashboard/"
