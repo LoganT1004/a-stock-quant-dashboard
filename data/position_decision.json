@@ -1,15 +1,15 @@
 {
  "date": "2026-08-13",
  "execDate": "2026-08-14",
- "intraday": true,
- "trend": "bottom",
- "trendName": "震荡市·低位摸底",
- "trendRaw": "bottom",
- "center": 6,
+ "intraday": false,
+ "trend": "mid",
+ "trendName": "震荡市·中位横盘",
+ "trendRaw": "mid",
+ "center": 5,
  "trendSince": "2026-08-13",
  "trendReason": "",
- "trendStartDate": "2026-08-12",
- "trendStartIdx": 389,
+ "trendStartDate": "2026-08-13",
+ "trendStartIdx": 390,
  "alertActive": false,
  "alertReason": "",
  "changeMarkers": [],
@@ -47,6 +47,15 @@
    "color": "#e53935",
    "from": "mid",
    "to": "bottom"
+  },
+  {
+   "type": "trend",
+   "date": "2026-08-13",
+   "label": "【趋势变更】",
+   "text": "震荡市·低位摸底 → 震荡市·中位横盘",
+   "color": "#e53935",
+   "from": "bottom",
+   "to": "mid"
   }
  ],
  "indicatorDetail": {
@@ -55,12 +64,12 @@
     "name": "GMMA短期组斜率",
     "value": "→",
     "showVals": [
-     1748.43,
-     1735.21,
-     1724.18,
-     1723.05,
-     1725.48,
-     1732.95
+     1722.29,
+     1717.78,
+     1712.57,
+     1713.54,
+     1717.44,
+     1726.42
     ],
     "rule": "↑=短期资金流入；↓=短期资金流出；→=持平"
    },
@@ -68,28 +77,28 @@
     "name": "GMMA长期组斜率",
     "value": "→",
     "showVals": [
-     1771.03,
-     1776.34,
-     1778.26,
-     1777.51,
-     1774.74,
-     1765.13
+     1767.65,
+     1773.44,
+     1775.71,
+     1775.24,
+     1772.69,
+     1763.41
     ],
     "rule": "↑=主线趋势向上；↓=主线趋势向下；→=持平"
    },
    {
     "name": "GMMA整体状态",
-    "value": "低位收敛 [converging_low]",
+    "value": "缠绕 [crossed]",
     "rule": "单边多头=上涨趋势明确｜单边空头=下跌趋势明确｜低位收敛=下跌动能衰竭磨底｜高位收敛=上涨动能衰减博弈｜缠绕=震荡"
    },
    {
     "name": "ADX",
-    "value": 17.43,
+    "value": 17.41,
     "rule": "GMMA单边+ADX≥25=强趋势｜GMMA单边+ADX 20-25=弱趋势｜GMMA收敛/缠绕+ADX 20-25=弱震荡｜GMMA收敛/缠绕+ADX 15-20=中性震荡｜GMMA收敛/缠绕+ADX<15=极弱震荡"
    },
    {
     "name": "+DI/-DI方向",
-    "value": "21.99/22.75（空方占优）",
+    "value": "21.7/22.35（空方占优）",
     "rule": "+DI＞-DI=多方占优；-DI＞+DI=空方占优"
    },
    {
@@ -99,101 +108,106 @@
    },
    {
     "name": "整体趋势结论",
-    "value": "震荡",
+    "value": "震荡市，中位横盘",
     "rule": "中期空头+低位收敛=下跌趋势中低位震荡磨底｜中期多头+高位收敛=上涨趋势中高位震荡筑顶｜缠绕=震荡市中位横盘"
    }
   ],
   "aux": [
    {
     "name": "布林上轨/中轨/下轨",
-    "value": "1889.7/1722.06/1554.43",
-    "rule": "轨位64%（中位）｜收口缩窄｜波动收窄，临近方向选择"
+    "value": "1885.63/1719.45/1553.27",
+    "rule": "轨位50%（中位）｜收口缩窄｜波动收窄，临近方向选择"
    },
    {
     "name": "MA5/MA20 中期结构",
-    "value": "1739.66/1722.06",
+    "value": "1729.21/1719.45",
     "rule": "MA5在MA20上方，中期多头结构"
    },
    {
     "name": "MA5 短期变化",
-    "value": "+1.75%",
-    "rule": "站上MA5，短期反弹"
+    "value": "-0.66%",
+    "rule": "跌破MA5，短期回落"
    },
    {
     "name": "MACD DIF/DEA",
-    "value": "-38.41/-51.21",
+    "value": "-42.58/-52.05",
     "rule": "金叉｜零轴下方｜零轴下金叉=弱势反弹，底背离"
    },
    {
     "name": "当日量比",
-    "value": 0.56,
-    "rule": "≥1.2放量｜0.8-1.2正常｜<0.8缩量｜缩量｜位置判定（结构优先：中位缩量，交投清淡，方向不明（中性））"
+    "value": 0.94,
+    "rule": "≥1.2放量｜0.8-1.2正常｜<0.8缩量｜正常｜位置判定（结构优先：量能中性）"
    },
    {
     "name": "5日均量比",
-    "value": 0.62,
-    "rule": "持续缩量，观望气氛浓｜与当日量比互证"
+    "value": 0.96,
+    "rule": "未持续放量，趋势未确认｜与当日量比互证"
    }
   ]
  },
  "trackRecs": {
   "primary": {
    "track": "半导体设备",
-   "score": 66.8,
-   "amount": 0.7,
+   "score": 60.8,
+   "amount": 1.0,
    "action": "减仓",
    "slot": "【等额】",
-   "logic": "技术面：中性震荡 ｜ 综合分位：强势区 ｜ 消息面：无显著边际 ｜ 【等额】减仓0.7成"
+   "logic": "技术面：中性震荡 ｜ 综合分位：中性偏强 ｜ 消息面：无显著边际 ｜ 【等额】减仓1.0成"
   },
   "secondary": {
    "track": "存储芯片",
-   "score": 66.8,
-   "amount": 0.7,
+   "score": 60.8,
+   "amount": 1.0,
    "action": "减仓",
    "slot": "【等额】",
-   "logic": "技术面：中性震荡 ｜ 综合分位：强势区 ｜ 消息面：无显著边际 ｜ 【等额】减仓0.7成"
+   "logic": "技术面：中性震荡 ｜ 综合分位：中性偏强 ｜ 消息面：无显著边际 ｜ 【等额】减仓1.0成"
   },
   "hold": [
    {
     "track": "光通信模块",
-    "score": 66.8,
-    "amount": 0.7,
+    "score": 60.8,
+    "amount": 1.0,
     "action": "减仓",
     "slot": "【等额】",
-    "logic": "技术面：中性震荡 ｜ 综合分位：强势区 ｜ 消息面：无显著边际 ｜ 【等额】减仓0.7成"
+    "logic": "技术面：中性震荡 ｜ 综合分位：中性偏强 ｜ 消息面：无显著边际 ｜ 【等额】减仓1.0成"
    }
   ]
  },
  "signals": {
-  "close": 1770.03,
-  "ma5": 1739.66,
-  "ma20": 1722.06,
-  "gmma": "converging_low",
-  "adx": 17.43,
-  "pdi": 21.99,
-  "mdi": 22.75,
-  "bb_mid": 1722.06,
-  "bb_lo": 1554.43,
-  "bb_up": 1889.7,
-  "bb_pct": 0.643,
-  "volRatio": 0.56,
+  "close": 1717.75,
+  "ma5": 1729.21,
+  "ma20": 1719.45,
+  "gmma": "crossed",
+  "adx": 17.41,
+  "pdi": 21.7,
+  "mdi": 22.35,
+  "bb_mid": 1719.45,
+  "bb_lo": 1553.27,
+  "bb_up": 1885.63,
+  "bb_pct": 0.495,
+  "volRatio": 0.94,
   "divBottom": true,
   "divTop": false,
   "strength": "neutral",
   "ruleVersion": "v3.1-顾比GMMA+ADX+布林带+量价·全量显性化"
  },
- "score": 63.9,
+ "score": 60.5,
  "zone": "中性",
- "target": 6,
+ "target": 5,
  "current": 8.0,
- "diff": -2.0,
+ "diff": -3.0,
  "action": "不动",
  "execAmount": 0.0,
- "note": "同区间波动不重复调仓",
+ "note": "熔断：科创50 MA5>MA20（中期多头结构：MA5=1729.21>MA20=1719.45）——停止减仓",
  "userAcked": false,
- "pendingAction": null,
+ "pendingAction": {
+  "date": "2026-08-13",
+  "action": "减仓",
+  "amount": -3.0,
+  "target": 5
+ },
  "alignPhase": 2,
- "fuseHit": null,
+ "fuseHit": "科创50 MA5>MA20（中期多头结构：MA5=1729.21>MA20=1719.45）",
  "cooldown": false,
  "trendChanged": false,
  "mapTable": {

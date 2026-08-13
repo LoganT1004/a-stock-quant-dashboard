@@ -1,19 +1,19 @@
 {
  "current_position": 8.0,
- "prev_trend": "bottom",
- "trend_since": "2026-08-12",
+ "prev_trend": "mid",
+ "trend_since": "2026-08-13",
  "trend_reason": "",
- "trend_start_date": "2026-08-12",
- "trend_confirm_date": "2026-08-12",
+ "trend_start_date": "2026-08-13",
+ "trend_confirm_date": "2026-08-13",
  "change_markers": [],
  "last_zone": "中性",
- "last_stage": "bottom",
+ "last_stage": "mid",
  "last_adjust": null,
  "alert_state": null,
  "align_phase": 2,
  "align_start": "2026-08-07",
  "observe_start_idx": 319,
- "fuse_triggered": "科创50 MA5上穿MA20（金叉）",
+ "fuse_triggered": "科创50 MA5>MA20（中期多头结构：MA5=1729.21>MA20=1719.45）",
  "history": [
   {
    "date": "2026-08-07",
@@ -529,10 +529,45 @@
    "action": "不动",
    "amount": 0.0,
    "acked": false
+  },
+  {
+   "date": "2026-08-13",
+   "trend": "mid",
+   "zone": "中性",
+   "score": 60.5,
+   "target": 5,
+   "action": "减仓",
+   "amount": -3.0,
+   "acked": false
+  },
+  {
+   "date": "2026-08-13",
+   "trend": "mid",
+   "zone": "中性",
+   "score": 60.5,
+   "target": 5,
+   "action": "不动",
+   "amount": 0.0,
+   "acked": false
+  },
+  {
+   "date": "2026-08-13",
+   "trend": "mid",
+   "zone": "中性",
+   "score": 60.5,
+   "target": 5,
+   "action": "不动",
+   "amount": 0.0,
+   "acked": false
   }
  ],
  "user_acked": false,
- "pending_action": null,
+ "pending_action": {
+  "date": "2026-08-13",
+  "action": "减仓",
+  "amount": -3.0,
+  "target": 5
+ },
  "trend_judgments": [
   {
    "type": "judgment",
@@ -567,6 +602,15 @@
    "color": "#e53935",
    "from": "mid",
    "to": "bottom"
+  },
+  {
+   "type": "trend",
+   "date": "2026-08-13",
+   "label": "【趋势变更】",
+   "text": "震荡市·低位摸底 → 震荡市·中位横盘",
+   "color": "#e53935",
+   "from": "bottom",
+   "to": "mid"
   }
  ]
 }

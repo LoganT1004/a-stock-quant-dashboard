@@ -877,18 +877,31 @@ def main():
     align_phase = state.get("align_phase", 0)
     fuse_hit = None
 
-    if align_phase in (0, 1):
-        golden_cross = ma5v[i] is not None and ma20v[i] is not None and ma5v[i] > ma20v[i] and i >= 1 and ma5v[i - 1] <= ma20v[i - 1]
-        chg_today = closes[i] / closes[i - 1] - 1 if i >= 1 else 0
-        vol_ma20_s = sum(vols[max(0, i - 20):i]) / min(20, i)
-        vol_burst = chg_today >= 0.03 and vols[i] > vol_ma20_s * 1.2
-        if golden_cross: fuse_hit = "科创50 MA5上穿MA20（金叉）"
-        elif vol_burst: fuse_hit = "单日涨幅%.2f%%≥3%%且放量" % (chg_today * 100)
-        elif comp > 80: fuse_hit = "综合得分%.1f突破80分" % comp
+    # 2026-08-13 修订：熔断检查扩展到所有 phase，不再只在 phase 0/1 时触发
+    # 规则（用户明确）：只要 MA5>MA20（中期多头结构）就触发熔断暂停减仓
+    # 不需要"金叉"条件（前一日 MA5<=MA20）——MA5>MA20 本身就足以触发
+    # 另加：单日涨≥3%且放量，或综合得分>80
+    # 若 diff<0（需要减仓），触发熔断暂停减仓；若 diff>=0，加仓场景不熔断
+    ma5_above_ma20 = ma5v[i] is not None and ma20v[i] is not None and ma5v[i] > ma20v[i]
+    chg_today = closes[i] / closes[i - 1] - 1 if i >= 1 else 0
+    vol_ma20_s = sum(vols[max(0, i - 20):i]) / min(20, i)
+    vol_burst = chg_today >= 0.03 and vols[i] > vol_ma20_s * 1.2
+    if ma5_above_ma20:
+        fuse_hit = "科创50 MA5>MA20（中期多头结构：MA5=%.2f>MA20=%.2f）" % (ma5v[i], ma20v[i])
+    elif vol_burst:
+        fuse_hit = "单日涨幅%.2f%%≥3%%且放量（量比%.2f）" % (chg_today * 100, vols[i] / vol_ma20_s if vol_ma20_s else 0)
+    elif comp > 80:
+        fuse_hit = "综合得分%.1f突破80分" % comp
+    # 仅当 diff<0（需要减仓）时才用熔断暂停减仓
+    fuse_for_reduce = fuse_hit and diff < 0
 
     if align_phase == 0:
         if abs(diff) < 0.5: action, note, state["align_phase"] = "不动", "差额不足0.5成，直接完成对齐", 2
         elif abs(diff) <= 2: action, exec_amount, note, state["align_phase"] = ("加仓" if diff > 0 else "减仓"), diff, "差额%.1f成≤2成，首日一次性对齐" % abs(diff), 2
+        elif fuse_for_reduce:
+            # 2026-08-13 修订：首日就触发熔断——暂停减仓，跳过5日观察期
+            action, exec_amount, note, state["align_phase"] = "不动", 0.0, "熔断：%s——首日即停止减仓，等待反弹确认" % fuse_hit, 2
+            state["fuse_triggered"] = fuse_hit
         else:
             half = max(-2.0, min(2.0, round(diff / 2, 1)))
             action, exec_amount = ("加仓" if half > 0 else "减仓"), half
@@ -896,7 +909,7 @@ def main():
             state["align_phase"], state["align_start"], state["observe_start_idx"] = 1, today, i
     elif align_phase == 1:
         obs_days = i - state.get("observe_start_idx", i)
-        if fuse_hit and diff < 0:
+        if fuse_for_reduce:
             action, exec_amount, note, state["align_phase"] = "不动", 0.0, "熔断：%s——停止减仓" % fuse_hit, 2
             state["fuse_triggered"] = fuse_hit
         elif obs_days >= 5:
@@ -906,7 +919,12 @@ def main():
         else:
             action, note = "不动", "观察期第%d/5日" % obs_days
     else:
-        if abs(diff) < 0.5: action, note = "不动", "差额%.1f成＜0.5成不操作" % abs(diff)
+        # align_phase == 2: 已完成对齐或首日熔断后
+        # 2026-08-13 修订：若新触发熔断（MA5上穿MA20 / 单日涨≥3% / 综合得分>80）且 diff<0，停止减仓
+        if fuse_for_reduce:
+            action, exec_amount, note = "不动", 0.0, "熔断：%s——停止减仓" % fuse_hit
+            state["fuse_triggered"] = fuse_hit
+        elif abs(diff) < 0.5: action, note = "不动", "差额%.1f成＜0.5成不操作" % abs(diff)
         elif not (trend_changed or stage_changed or zone_changed): action, note = "不动", "同区间波动不重复调仓"
         elif in_cooldown: action, note = "不动", "同向冷却期（%s）" % state["last_adjust"]["date"]
         else:
