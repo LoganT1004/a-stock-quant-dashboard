@@ -1,47 +1,47 @@
 {
-  "date": "2026-08-12",
-  "session": "close",
-  "started_at": "2026-08-12T23:24:25.149245",
+  "date": "2026-08-13",
+  "session": "noon",
+  "started_at": "2026-08-13T11:58:57.664421",
   "trading_day": true,
   "steps": [
     {
       "name": "海外行情刷新",
       "script": "fetch_overseas.py",
       "ok": true,
-      "elapsed": 34.84
+      "elapsed": 23.78
     },
     {
       "name": "A股日数据刷新",
       "script": "fetch_daily_data.py",
       "ok": true,
-      "elapsed": 1.49
+      "elapsed": 0.81
     },
     {
       "name": "看板快速刷新",
       "script": "quick_refresh.py",
       "ok": true,
-      "elapsed": 96.7
+      "elapsed": 79.68
     }
   ],
   "dashboard_summary": {
-    "meta_date": "2026-08-12",
-    "session": "收盘更新（15:00）",
+    "meta_date": "2026-08-13",
+    "session": "盘中实时",
     "composite": {},
     "signals": {
       "上证指数": {
-        "close": 3946.68,
-        "chg": 0.32,
-        "volRatio": 0.89
+        "close": 3963.15,
+        "chg": 0.42,
+        "volRatio": 1.31
       },
       "创业板指": {
-        "close": 3602.08,
-        "chg": 1.49,
-        "volRatio": 0.82
+        "close": 3660.25,
+        "chg": 1.61,
+        "volRatio": 1.32
       },
       "科创50": {
-        "close": 1736.99,
-        "chg": 1.61,
-        "volRatio": 0.82
+        "close": 1770.03,
+        "chg": 1.9,
+        "volRatio": 1.11
       }
     },
     "limit_count": {
@@ -51,6 +51,6 @@
     }
   },
   "success": true,
-  "finished_at": "2026-08-12T23:26:38.199146",
+  "finished_at": "2026-08-13T12:00:41.947314",
   "deploy_ready": true
 }

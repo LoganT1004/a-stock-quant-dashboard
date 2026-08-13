@@ -6,9 +6,9 @@
   "limit_down": 0,
   "natural_limit_up": 43,
   "natural_limit_down": 0,
-  "src": "东方财富牛熊风向标(https://quote.eastmoney.com/ztb/?from=center) - push2 clist t:6 板（f3≥9.9） [API失败，保留旧值] [API失败，保留旧值] [API失败，保留旧值] [API失败，保留旧值]",
+  "src": "东方财富牛熊风向标(https://quote.eastmoney.com/ztb/?from=center) - push2 clist t:6 板（f3≥9.9） [API失败，保留旧值] [API失败，保留旧值] [API失败，保留旧值] [API失败，保留旧值] [API失败，保留旧值] [API失败，保留旧值]",
   "source_url": "https://quote.eastmoney.com/ztb/?from=center",
-  "ts": 1786548379.7475572,
+  "ts": 1786593624.9173226,
   "details_up": [
     {
       "code": "002146",
