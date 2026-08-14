@@ -67,6 +67,7 @@ TRACK_BK = {
     "半导体设备": {"file": "bk1326_raw.json", "code": "BK1326"},
     "存储芯片":   {"file": "bk1137_raw.json", "code": "BK1137"},
     "光通信模块": {"file": "bk1136_raw.json", "code": "BK1136"},
+    "创新药":     {"file": "bk1106_raw.json", "code": "BK1106"},
 }
 def load_bk(fn):
     d = load(fn)
@@ -210,10 +211,10 @@ if kc50:
         pass
     real_limit_down = limit_info.get("limit_down")
     real_limit_up = limit_info.get("limit_up")
-    limit_src = limit_info.get("src", "")
     limit_text = ""
     if real_limit_down is not None and real_limit_up is not None:
-        limit_text = "｜今日涨停%d家 / 跌停%d家（%s）" % (real_limit_up, real_limit_down, limit_src)
+        # 2026-08-13 修订：只显示数量，不拼接 src 长串（用户要求）
+        limit_text = "｜今日涨停%d家 / 跌停%d家" % (real_limit_up, real_limit_down)
     else:
         limit_text = "｜跌停家数待补（请运行 fetch_limit_count.py）"
     all3 = all(v <= -3 for v in sync.values())

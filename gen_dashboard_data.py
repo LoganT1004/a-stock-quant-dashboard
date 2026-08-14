@@ -99,6 +99,14 @@ def auto_signal(rows, name):
     # 盘中按已交易时长投影到全日，使盘中量比与东方财富 APP 一致
     today_vol = rows[-1]["vol"] * intraday_vol_factor()
     vr = round(today_vol / vol_ma5, 2) if vol_ma5 > 0 else None
+    # 2026-08-13 修订：优先用东方财富官方 f50 量比字段（vol_ratio_official.json）
+    # 指数"量比"在东方财富用官方字段，自算口径可能有细微偏差（如创业板 1.03 vs 官方 1.06）
+    try:
+        _vo = json.load(open(os.path.join(DATA, "vol_ratio_official.json"), encoding="utf-8"))
+        if name in _vo and isinstance(_vo.get(name), (int, float)):
+            vr = round(float(_vo[name]), 2)
+    except Exception:
+        pass
     dif_s = round(dif[-1], 2); dea_s = round(dea[-1], 2)
     macd_state = "DIF在DEA上方" if dif[-1] > dea[-1] else "DIF在DEA下方"
     detail = ("DIF=%s/DEA=%s（%s）；收盘%sMA5（%s）已连续%s日；量比%s%s" %

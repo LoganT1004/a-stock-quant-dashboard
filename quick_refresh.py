@@ -523,6 +523,19 @@ try:
     if r.returncode != 0:
         print("  fetch_daily_data.py 异常: %s" % (r.stderr or "")[-200:])
 
+    # ==================== 4.7) WebFetch 兜底数据合并（BK板块/CDS/ETF/涨跌停/消息面） ====================
+    # 本机 push2/push2his 被封时，由自动化任务通过 WebFetch 把数据写入
+    # data/*_result.json 文件；本步骤负责合并到最终数据文件。
+    set_status("WebFetch兜底数据合并（result.json统一合并）")
+    r = subprocess.run([PY, os.path.join(BASE, "fetch_via_web_results.py")],
+                       capture_output=True, text=True, timeout=60)
+    if r.stdout:
+        for line in r.stdout.splitlines():
+            if "✓" in line or "✗" in line or "合并" in line or "无更新" in line or "起始" in line or "完成" in line:
+                print("  " + line)
+    if r.returncode != 0:
+        print("  fetch_via_web_results.py 异常: %s" % (r.stderr or "")[-200:])
+
     # ==================== 5) 依次跑涨跌停→消息面→评分→payload→风控→整合→论证→仓位→生成 ====================
     for step, script in [("更新涨跌停家数", "fetch_limit_count.py"),
                          ("刷新消息面时间戳", "fetch_news.py"),

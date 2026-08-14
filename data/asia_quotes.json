@@ -1,8 +1,8 @@
 {
- "date": "2026-08-13",
- "kospi_chg": 3.96,
- "n225_chg": 1.81,
- "hstech_chg": 0.33,
+ "date": "2026-08-14",
+ "kospi_chg": 2.42,
+ "n225_chg": 0.59,
+ "hstech_chg": -1.77,
  "secids": "100.KS11,100.N225,124.HSTECH",
  "src": "东方财富-push2 ulist.np via WebFetch",
  "note": "日韩指数收盘/恒生科技盘中"

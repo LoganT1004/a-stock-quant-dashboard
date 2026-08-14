@@ -286,18 +286,48 @@
   "sigBrief": "九转计数：上证-/创业板-/科创50-；综合63.9分（中性震荡区）"
  },
  {
-  "time": "2026-08-13 16:09",
+  "time": "2026-08-13 23:37",
   "label": "收盘",
-  "composite": 60.0,
+  "composite": 59.2,
   "zone": "中性震荡区",
   "tech": 58.7,
   "overseas": 62.1,
+  "capital": 44.0,
+  "fund": 70.3,
+  "extras": 0,
+  "trend": "mid",
+  "trendName": "震荡市·中位横盘",
+  "trendStartDate": "2026-08-13",
+  "sigBrief": "九转计数：上证-/创业板-/科创50-；综合59.2分（中性震荡区）"
+ },
+ {
+  "time": "2026-08-14 09:45",
+  "label": "午盘",
+  "composite": 59.2,
+  "zone": "中性震荡区",
+  "tech": 58.7,
+  "overseas": 62.1,
+  "capital": 44.0,
+  "fund": 70.3,
+  "extras": 0,
+  "trend": "mid",
+  "trendName": "震荡市·中位横盘",
+  "trendStartDate": "2026-08-13",
+  "sigBrief": "九转计数：上证-/创业板-/科创50-；综合59.2分（中性震荡区）"
+ },
+ {
+  "time": "2026-08-14 20:48",
+  "label": "收盘",
+  "composite": 57.9,
+  "zone": "中性震荡区",
+  "tech": 55.8,
+  "overseas": 60.1,
   "capital": 51.5,
   "fund": 70.3,
   "extras": 0,
   "trend": "mid",
   "trendName": "震荡市·中位横盘",
   "trendStartDate": "2026-08-13",
-  "sigBrief": "九转计数：上证-/创业板-/科创50-；综合60.0分（中性震荡区）"
+  "sigBrief": "九转计数：上证-/创业板-/科创50-；综合57.9分（中性震荡区）"
  }
 ]

@@ -4,7 +4,7 @@
  "trend_since": "2026-08-13",
  "trend_reason": "",
  "trend_start_date": "2026-08-13",
- "trend_confirm_date": "2026-08-13",
+ "trend_confirm_date": "2026-08-14",
  "change_markers": [],
  "last_zone": "中性",
  "last_stage": "mid",
@@ -569,6 +569,76 @@
    "action": "不动",
    "amount": 0.0,
    "acked": false
+  },
+  {
+   "date": "2026-08-13",
+   "trend": "mid",
+   "zone": "中性",
+   "score": 59.2,
+   "target": 5,
+   "action": "不动",
+   "amount": 0.0,
+   "acked": false
+  },
+  {
+   "date": "2026-08-14",
+   "trend": "mid",
+   "zone": "中性",
+   "score": 57.8,
+   "target": 5,
+   "action": "不动",
+   "amount": 0.0,
+   "acked": false
+  },
+  {
+   "date": "2026-08-14",
+   "trend": "mid",
+   "zone": "中性",
+   "score": 57.8,
+   "target": 5,
+   "action": "不动",
+   "amount": 0.0,
+   "acked": false
+  },
+  {
+   "date": "2026-08-14",
+   "trend": "mid",
+   "zone": "中性",
+   "score": 57.8,
+   "target": 5,
+   "action": "不动",
+   "amount": 0.0,
+   "acked": false
+  },
+  {
+   "date": "2026-08-14",
+   "trend": "mid",
+   "zone": "中性",
+   "score": 57.9,
+   "target": 5,
+   "action": "不动",
+   "amount": 0.0,
+   "acked": false
+  },
+  {
+   "date": "2026-08-14",
+   "trend": "mid",
+   "zone": "中性",
+   "score": 57.9,
+   "target": 5,
+   "action": "不动",
+   "amount": 0.0,
+   "acked": false
+  },
+  {
+   "date": "2026-08-14",
+   "trend": "mid",
+   "zone": "中性",
+   "score": 57.9,
+   "target": 5,
+   "action": "不动",
+   "amount": 0.0,
+   "acked": false
   }
  ],
  "user_acked": false,
@@ -621,6 +691,15 @@
    "color": "#e53935",
    "from": "bottom",
    "to": "mid"
+  },
+  {
+   "type": "active",
+   "date": "2026-08-13",
+   "label": "【震荡市·中位横盘生效】",
+   "text": "震荡市·中位横盘生效起始",
+   "color": "#ff9800",
+   "to": "mid"
   }
- ]
+ ],
+ "fuse_state": {}
 }

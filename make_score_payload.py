@@ -16,48 +16,214 @@ others_sum = ov["score"]*0.25 + cap["score"]*0.1 + fund["score"]*0.05 + sr["extr
 def idx_composite(track_score, wide_score):
     return round(0.6*(0.6*track_score + 0.4*wide_score) + others_sum, 1)
 
-by_index = []
+by_index = []  # 2026-08-13 修订：删除分宽基指数综合得分
 for k, s in tech["wideScores"].items():
-    # 2026-08-12 修订：注记动态取当日涨跌幅（不再硬编码8/10）
-    # wideDetail 是列表（subs 数组），不是dict；chg 需要从 wide kline 取
-    chg = 0
-    try:
-        # 直接读 wide 数据获取当日涨跌幅
-        fn = {"上证指数":"szzs_full.json","创业板指":"cybz_full.json","科创50":"kc50_full.json"}[k]
-        d_full = json.load(open(os.path.join(DATA, fn), encoding="utf-8"))
-        key = {"上证指数":"sh000001","创业板指":"sz399006","科创50":"sh000688"}[k]
-        day = d_full["data"][key]["day"]
-        chg = round((float(day[-1][2]) / float(day[-2][2]) - 1) * 100, 2)
-    except Exception:
-        chg = 0
-    note_map = {
-        "上证指数": f"8/12 {chg:+.2f}%，宽基中相对最强",
-        "创业板指": f"8/12 {chg:+.2f}%，融资重仓股集中",
-        "科创50": f"8/12 {chg:+.2f}%缩量整理，连续5日站上MA5",
-    }
-    note = note_map[k]
-    by_index.append({"name": k, "score": idx_composite(tech["trackAvg"], s), "zone": "中性震荡区", "note": note})
+    pass  # noop，保留占位以避免破坏 score_result 兼容
+
+# 2026-08-13 修订：四赛道综合得分（含创新药 BK1106），用新公式 技术面50% + 基本面35% + 消息面15%
 by_track = []
-for t, s in tech["trackScores"].items():
-    # 2026-08-12 修订：动态取当日赛道涨跌幅
-    track_chg = 0
-    track_date = ""
-    try:
-        fn = {"半导体设备":"bk1326_raw.json","存储芯片":"bk1137_raw.json","光通信模块":"bk1136_raw.json"}[t]
-        d_bk = json.load(open(os.path.join(DATA, fn), encoding="utf-8"))
-        ks = d_bk["klines"]
-        track_chg = round((float(ks[-1].split(",")[2]) / float(ks[-2].split(",")[2]) - 1) * 100, 2)
-        track_date = ks[-1].split(",")[0].replace("2026-", "").replace("-", "/")
-    except Exception:
-        track_chg = 0
-        track_date = "8/12"
-    note_map = {
-        "存储芯片": f"{track_date} {track_chg:+.2f}%窄幅震荡，长鑫主力-32亿带动板块回踩",
-        "半导体设备": f"{track_date} {track_chg:+.2f}%强势（中微+6.08/拓荆+5.41/盛美+10%+），国产替代+并购验证",
-        "光通信模块": f"{track_date} {track_chg:+.2f}%，算力开支持疑冲击（中际旭创-6.01/新易盛-5.07），等待英伟达财报验证"
+_track_scores_raw = {}
+_track_scores_fp = os.path.join(DATA, "track_scores.json")
+if os.path.exists(_track_scores_fp):
+    _track_scores_raw = json.load(open(_track_scores_fp, encoding="utf-8"))
+
+# 趋势判定（基于 BK 板块的 MA5 vs MA20 + MA20 方向）
+def _trend_judge(bk_fp):
+    """1:1 对齐科创50 + 位置状态判定（用户指令 v4.2）。
+
+    位置状态 4 档（基于近20日区间分位 + MA20 方向 + 5日反弹）：
+      高位横盘：pct ≥ 80%（默认高位区间震荡）
+      中位反弹：pct 30-70% + MA20拐头向上 + 5日内反弹
+      中位横盘：pct 30-70% + MA20平稳（默认中位区间震荡）
+      低位筑底：pct ≤ 20%（低位区间震荡）
+
+    输出趋势名统一为「震荡市·XXXX」（按用户示例）。
+    """
+    import sys
+    _BASE = os.path.dirname(os.path.abspath(__file__))
+    if _BASE not in sys.path:
+        sys.path.insert(0, _BASE)
+    from position_engine import gmma_state, calc_adx
+
+    if not os.path.exists(bk_fp):
+        return "震荡市·数据不足", "→", "→", 0.0, 0.0, 0.0, "数据不足", ""
+    d = json.load(open(bk_fp, encoding="utf-8"))
+    ks = d.get("klines", [])
+    if len(ks) < 60:
+        return "震荡市·数据不足", "→", "→", 0.0, 0.0, 0.0, "数据不足", ""
+    closes = [float(r.split(",")[2]) for r in ks]
+    highs = [float(r.split(",")[3]) for r in ks]
+    lows = [float(r.split(",")[4]) for r in ks]
+    n = len(closes)
+    i = n - 1
+
+    # GMMA + ADX + DI（保留作为详情）
+    gmma_s, gmma_d = gmma_state(closes, i)
+    adx_arr, pdi_arr, mdi_arr = calc_adx(highs, lows, closes, 14)
+    adx_val = round(adx_arr[i] or 0, 2)
+    pdi_val = round(pdi_arr[i] or 0, 2)
+    mdi_val = round(mdi_arr[i] or 0, 2)
+
+    # GMMA 短期/长期组斜率
+    shorts = gmma_d.get("shorts", [])
+    longs = gmma_d.get("longs", [])
+    def _slope(arr):
+        if len(arr) < 2: return "→"
+        diffs = [arr[k] - arr[k-1] for k in range(1, len(arr))]
+        pos = sum(1 for d in diffs if d > 0)
+        neg = sum(1 for d in diffs if d < 0)
+        if pos == len(diffs): return "↑"
+        if neg == len(diffs): return "↓"
+        return "→"
+    s_slope = _slope(shorts)
+    l_slope = _slope(longs)
+
+    gmma_zh = {
+        "bullish": "单边多头",
+        "bearish": "单边空头",
+        "converging_low": "低位收敛",
+        "converging_high": "高位收敛",
+        "crossed": "缠绕",
     }
-    note = note_map[t]
-    by_track.append({"name": t, "score": idx_composite(s, tech["wideAvg"]), "zone": "中性震荡区", "note": note})
+    gmma_str = gmma_zh.get(gmma_s, "未知")
+
+    # ---------- 位置状态判定（v4.2） ----------
+    last = closes[i]
+    h20 = max(highs[-20:])
+    l20 = min(lows[-20:])
+    pct = (last - l20) / (h20 - l20) if h20 > l20 else 0.5
+    # 5 日涨幅
+    chg5 = (last / closes[i - 5] - 1) if i >= 5 else 0
+
+    # 优先级判定（v4.2 精细化：高位 85%+ 严格高位，80-85% 视 MA20 方向）
+    if pct >= 0.85:
+        position = "震荡市·高位横盘"
+    elif pct <= 0.2:
+        position = "震荡市·低位筑底"
+    elif 0.3 <= pct <= 0.7:
+        # 中位区间 + MA20 拐头向上 + 5 日反弹 → 中位反弹
+        if l_slope == "↑" and chg5 > 0.005:
+            position = "震荡市·中位反弹"
+        else:
+            position = "震荡市·中位横盘"
+    elif pct >= 0.8:
+        # 80%-85% 边界区：MA20 向上 → 中位反弹（高位但不极端）；否则中位横盘
+        if l_slope == "↑" and chg5 > 0.005:
+            position = "震荡市·中位反弹"
+        else:
+            position = "震荡市·中位横盘"
+    else:
+        # 20%-30% 或 70%-80% 边界区
+        if l_slope == "↑" and chg5 > 0.01:
+            position = "震荡市·中位反弹"
+        else:
+            position = "震荡市·中位横盘"
+
+    # MA20 方向（用 l_slope 反映给前端）
+    ma20_dir = "向上" if l_slope == "↑" else ("向下" if l_slope == "↓" else "—")
+
+    # 趋势生效起始日：MA5/MA20 关系首次反转
+    trend_start = ks[-1].split(",")[0]
+    ma5 = sum(closes[-5:]) / 5
+    relation = ma5 > sum(closes[-20:]) / 20
+    for k in range(i - 1, 19, -1):
+        ma5k = sum(closes[k - 4:k + 1]) / 5
+        ma20k = sum(closes[k - 19:k + 1]) / 20
+        if (ma5k > ma20k) != relation:
+            trend_start = ks[k + 1].split(",")[0]
+            break
+
+    return position, s_slope, l_slope, adx_val, pdi_val, mdi_val, gmma_str, trend_start
+
+# 4 个赛道（含创新药）按新公式计算综合得分
+_BK_FILES = {
+    "半导体设备": "bk1326_raw.json",
+    "存储芯片": "bk1137_raw.json",
+    "光通信模块": "bk1136_raw.json",
+    "创新药": "bk1106_raw.json",
+}
+_track_results = []
+for t, bk_fn in _BK_FILES.items():
+    bk_fp = os.path.join(DATA, bk_fn)
+    (trend, s_slope, l_slope, adx_val, pdi_val, mdi_val,
+     gmma_str, trend_start) = _trend_judge(bk_fp)
+    if t in _track_scores_raw:
+        r = _track_scores_raw[t]
+        score = r.get("score", 50)
+        tech_v = r.get("tech", 50)
+        fund_v = r.get("fundamental", 50)
+        news_v = r.get("news", 50)
+        proxy_ratio = r.get("fundamental_proxy_ratio", 0.80)
+        public_ratio = r.get("fundamental_public_ratio", 0.20)
+    else:
+        score = tech_v = fund_v = news_v = 50
+        proxy_ratio, public_ratio = 0.80, 0.20
+    # 涨跌幅备注
+    chg_text = ""
+    if os.path.exists(bk_fp):
+        d = json.load(open(bk_fp, encoding="utf-8"))
+        ks = d.get("klines", [])
+        if len(ks) >= 2:
+            last = ks[-1].split(",")
+            prev = ks[-2].split(",")
+            chg = (float(last[2]) / float(prev[2]) - 1) * 100
+            chg_text = f"{last[0].replace('2026-', '')} {chg:+.2f}%"
+    # MA20 方向从 GMMA 长期组斜率推
+    ma20_dir = "向上" if l_slope == "↑" else ("向下" if l_slope == "↓" else "—")
+    note = f"{chg_text} | 技{tech_v:.1f}/代理基{fund_v:.1f}/消{news_v:.1f} | {trend}·MA20{ma20_dir}"
+    by_track.append({
+        "name": t,
+        "score": round(score, 2),
+        "tech": round(tech_v, 1),
+        "fundamental": round(fund_v, 1),
+        "news": round(news_v, 1),
+        "fundamentalProxyRatio": proxy_ratio,
+        "fundamentalPublicRatio": public_ratio,
+        "trend": trend,
+        "trendName": trend,
+        "trendStartDate": trend_start,
+        "ma20Direction": ma20_dir,
+        "gmmaState": gmma_str,
+        "gmmaShortSlope": s_slope,
+        "gmmaLongSlope": l_slope,
+        "adx": adx_val,
+        "pdi": pdi_val,
+        "mdi": mdi_val,
+        "zone": "中性震荡区" if 45 <= score <= 65 else ("强趋势区" if score > 65 else "弱趋势区"),
+        "note": note,
+        "strengthSort": 0,  # 后面填
+    })
+
+# 强度排序（按 score 降序）
+sorted_by_score = sorted(by_track, key=lambda x: -x["score"])
+for rank, item in enumerate(sorted_by_score, 1):
+    item["strengthSort"] = rank
+
+# 总仓位分配：按 score 归一化 + 5% 单位取整 + 合计 100%
+# 评分 50 → 5%（最低保底）；每高于 50 累计 +5%
+# 评分 70 → 5% + 4*5% = 25%
+# 用线性公式：基础 = max(5, (score-40)*1.0)，归一化到 100%，5% 取整
+raw_alloc = {}
+for item in by_track:
+    s = item["score"]
+    # 每个赛道基础占比：(score-40)%, 下限 5%
+    base = max(5, (s - 40))
+    raw_alloc[item["name"]] = base
+total_raw = sum(raw_alloc.values())
+# 归一化到 100%
+norm = {k: v / total_raw * 100 for k, v in raw_alloc.items()}
+# 5% 单位取整（标准四舍五入），然后调整使合计 = 100%
+alloc = {k: round(v / 5) * 5 for k, v in norm.items()}
+# 调整：最后一个补足差额到 100%
+total_alloc = sum(alloc.values())
+diff_alloc = 100 - total_alloc
+if diff_alloc != 0:
+    # 找最大 score 的赛道补/减
+    biggest = max(alloc, key=alloc.get)
+    alloc[biggest] += diff_alloc
+# 加到 by_track
+for item in by_track:
+    item["allocationPct"] = alloc[item["name"]]
 
 # 读取 position 中的 trend（用于历史趋势图标注趋势生效起始日）
 _pos_trend = None
@@ -92,6 +258,13 @@ score_system = {
     "ruleNote": sr["ruleNote"],
     "zones": zones,
     "extras": sr["extras"],
+    # 2026-08-13 修订：暴露技术面子指标原始分（用于前端展示"分指数/分行业综合得分"计算过程）
+    "tech": {
+        "trackAvg": tech["trackAvg"],
+        "wideAvg": tech["wideAvg"],
+        "trackScores": tech["trackScores"],
+        "wideScores": tech["wideScores"],
+    },
     "dimensions": [
         {"name": "技术面", "weight": 55, "score": tech["score"],
          "layers": [
@@ -104,7 +277,8 @@ score_system = {
         {"name": "资金面", "weight": 10, "score": cap["score"], "subs": cap["subs"]},
         {"name": "基本面与消息面", "weight": 10, "score": fund["score"], "subs": fund["subs"]},
     ],
-    "byIndex": by_index,
+    "byIndex": [],  # 2026-08-13 修订：删除分宽基指数综合得分（按用户要求）
+    "byTrack": by_track,
     "byTrack": by_track,
     "trend": _pos_trend,
     "trendName": _pos_trend_name,

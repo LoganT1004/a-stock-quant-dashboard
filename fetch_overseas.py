@@ -346,7 +346,11 @@ else:
                 day[-1][4] = "%.2f" % s["low"]   # 低
                 day[-1][1] = "%.2f" % s["open"] # 开
                 print(f"  新浪NDX覆盖当日bar: {day[-1][0]} {s['price']:.2f}")
-        if "qfqday" in payload.get("data", {}).get("us.NDX", {}):
+        # 关键修复：把更新后的 day 数组回写到 payload.data.us.NDX.day
+        # 之前只回写 qfqday，导致 dashboard (load_tx 取 .day) 永远显示老 bar
+        if day is not None:
+            payload.setdefault("data", {}).setdefault("us.NDX", {})["day"] = day
+        if day is not None and "qfqday" in payload.get("data", {}).get("us.NDX", {}):
             qf = payload["data"]["us.NDX"]["qfqday"]
             qf[:len(day)] = day
         json.dump(payload, open(ndx_fp, "w", encoding="utf-8"), ensure_ascii=False)

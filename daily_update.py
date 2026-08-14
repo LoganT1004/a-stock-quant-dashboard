@@ -186,6 +186,14 @@ def main():
     print(f"\n{'='*60}")
     if all_ok and status["deploy_ready"]:
         print(f"✅ {today} {session_label} 更新完成，可部署。")
+        # 2026-08-14：自动提示并尝试触发 CloudStudio 部署（让客户端一键跑 = 全量更新到永久链接）
+        try:
+            deploy_script = os.path.join(BASE, "deploy_dist")
+            if os.path.exists(os.path.join(deploy_script, "data.js")) and os.path.exists(os.path.join(deploy_script, "index.html")):
+                print(f"\n📦 检测到 deploy_dist 已就绪（data.js + index.html），请在 WorkBuddy 客户端调 workbuddy_cloudstudio_deploy 工具部署到永久链接。")
+                print(f"   或让 LLM 在本会话中自动调 workbuddy_cloudstudio_deploy action='deploy' directory='{deploy_script}'")
+        except Exception as e:
+            print(f"⚠️ 部署提示失败: {e}")
     elif all_ok:
         print(f"⚠️ {today} {session_label} 管道完成，但 meta.date={summary.get('meta_date')} 不等于今日，请检查数据源。")
     else:

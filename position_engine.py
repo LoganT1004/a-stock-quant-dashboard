@@ -872,66 +872,176 @@ def main():
         if direction_same and (datetime.strptime(today, "%Y-%m-%d") - last_dt).days < 7:
             in_cooldown = True
 
-    # ---------------- 初始对齐（保留） ----------------
+    # ---------------- V4.1 熔断分级与执行（基于科创50指数） ----------------
+    # 优先级：熔断失效红线 > 强熔断 > 弱熔断 > 常规调仓
     action, exec_amount, note = "不动", 0.0, ""
     align_phase = state.get("align_phase", 0)
-    fuse_hit = None
+    fuse_hit = None  # 旧字段（保持兼容）
+    fuse_state_out = {"tier": "无", "reason": "", "triggerDate": "",
+                       "observeEndDate": "", "observeRemaining": 0,
+                       "nearFLine": False, "flineReasons": []}
 
-    # 2026-08-13 修订：熔断检查扩展到所有 phase，不再只在 phase 0/1 时触发
-    # 规则（用户明确）：只要 MA5>MA20（中期多头结构）就触发熔断暂停减仓
-    # 不需要"金叉"条件（前一日 MA5<=MA20）——MA5>MA20 本身就足以触发
-    # 另加：单日涨≥3%且放量，或综合得分>80
-    # 若 diff<0（需要减仓），触发熔断暂停减仓；若 diff>=0，加仓场景不熔断
-    ma5_above_ma20 = ma5v[i] is not None and ma20v[i] is not None and ma5v[i] > ma20v[i]
+    # 准备熔断判定所需数据
+    ma5_v = ma5v[i] if i < len(ma5v) else None
+    ma20_v = ma20v[i] if i < len(ma20v) else None
+    adx_v = d_today.get("adx", 0) or 0
     chg_today = closes[i] / closes[i - 1] - 1 if i >= 1 else 0
-    vol_ma20_s = sum(vols[max(0, i - 20):i]) / min(20, i)
-    vol_burst = chg_today >= 0.03 and vols[i] > vol_ma20_s * 1.2
-    if ma5_above_ma20:
-        fuse_hit = "科创50 MA5>MA20（中期多头结构：MA5=%.2f>MA20=%.2f）" % (ma5v[i], ma20v[i])
-    elif vol_burst:
-        fuse_hit = "单日涨幅%.2f%%≥3%%且放量（量比%.2f）" % (chg_today * 100, vols[i] / vol_ma20_s if vol_ma20_s else 0)
-    elif comp > 80:
-        fuse_hit = "综合得分%.1f突破80分" % comp
-    # 仅当 diff<0（需要减仓）时才用熔断暂停减仓
-    fuse_for_reduce = fuse_hit and diff < 0
+    bb_pct = d_today.get("bb_pct", 0.5) or 0.5
+    close_above_ma20 = (ma20_v is not None and closes[i] > ma20_v)
+    # MA20 斜率：今日 vs 3 日前（向上/向下）
+    ma20_slope_up_3d = False
+    ma20_slope_down_3d = False
+    if i >= 3 and i - 3 < len(ma20v) and ma20v[i - 3] is not None and ma20_v is not None:
+        ma20_slope_up_3d = ma20_v > ma20v[i - 3]
+        ma20_slope_down_3d = ma20_v < ma20v[i - 3]
 
-    if align_phase == 0:
-        if abs(diff) < 0.5: action, note, state["align_phase"] = "不动", "差额不足0.5成，直接完成对齐", 2
-        elif abs(diff) <= 2: action, exec_amount, note, state["align_phase"] = ("加仓" if diff > 0 else "减仓"), diff, "差额%.1f成≤2成，首日一次性对齐" % abs(diff), 2
-        elif fuse_for_reduce:
-            # 2026-08-13 修订：首日就触发熔断——暂停减仓，跳过5日观察期
-            action, exec_amount, note, state["align_phase"] = "不动", 0.0, "熔断：%s——首日即停止减仓，等待反弹确认" % fuse_hit, 2
-            state["fuse_triggered"] = fuse_hit
+    # 0) 熔断失效红线（优先级最高，全局禁用熔断保护）
+    fuse_fline = False
+    fline_reasons = []
+    # 红线 1：科创50 单日 ±2% 且突破布林带上/下轨
+    if abs(chg_today) >= 0.02:
+        if chg_today > 0 and bb_pct >= 1.0:
+            fuse_fline = True
+            fline_reasons.append("单日涨幅%.2f%%且突破布林上轨" % (chg_today * 100))
+        elif chg_today < 0 and bb_pct <= 0.0:
+            fuse_fline = True
+            fline_reasons.append("单日跌幅%.2f%%且跌破布林下轨" % (chg_today * 100))
+    # 红线 2：ADX < 20 震荡市，全局禁用均线熔断
+    if adx_v < 20:
+        fuse_fline = True
+        fline_reasons.append("ADX=%.1f<20 震荡市" % adx_v)
+
+    # 1) 熔断档位判定（仅在非失效红线 且 diff 非零时判定）
+    fuse_tier = "无"
+    fuse_reason = ""
+    if not fuse_fline and abs(diff) > 0:
+        if diff < 0:  # 需要减仓 → 多头保护熔断
+            if ma5_v is not None and ma20_v is not None and ma5_v > ma20_v:
+                if ma20_slope_up_3d and close_above_ma20 and adx_v >= 25:
+                    fuse_tier = "强（多头）"
+                    fuse_reason = "MA20斜率3日向上+收盘站MA20+ADX=%.1f≥25" % adx_v
+                elif 20 <= adx_v < 25:
+                    fuse_tier = "弱（多头）"
+                    fuse_reason = "MA5>MA20+ADX=%.1f（20-25弱趋势）" % adx_v
+        elif diff > 0:  # 需要加仓 → 空头保护熔断
+            if ma5_v is not None and ma20_v is not None and ma5_v < ma20_v:
+                if ma20_slope_down_3d and not close_above_ma20 and adx_v >= 25:
+                    fuse_tier = "强（空头）"
+                    fuse_reason = "MA20斜率3日向下+收盘MA20下方+ADX=%.1f≥25" % adx_v
+                elif 20 <= adx_v < 25:
+                    fuse_tier = "弱（空头）"
+                    fuse_reason = "MA5<MA20+ADX=%.1f（20-25弱趋势）" % adx_v
+
+    # 2) 强熔断状态机（3 个交易日观察期）
+    from datetime import date as _date
+    prev_fuse = state.get("fuse_state", {})
+    if fuse_tier.startswith("强"):
+        # 续期判断：前次 tier 相同且未到期 → 续期；否则新触发
+        prev_end = prev_fuse.get("observeEndDate", "")
+        if prev_fuse.get("tier") == fuse_tier and prev_end and prev_end >= today:
+            # 续期观察期（保留触发日期）
+            end_date = _date.fromisoformat(prev_end)
+            remaining = (end_date - _date.today()).days
+            fuse_state_out = {"tier": fuse_tier, "reason": prev_fuse.get("reason", fuse_reason),
+                              "triggerDate": prev_fuse.get("triggerDate", today),
+                              "observeEndDate": prev_end, "observeRemaining": max(0, remaining),
+                              "nearFLine": fuse_fline, "flineReasons": fline_reasons}
         else:
-            half = max(-2.0, min(2.0, round(diff / 2, 1)))
-            action, exec_amount = ("加仓" if half > 0 else "减仓"), half
-            note = "首日半额调仓（差额%.1f成→执行%.1f成），5日观察期" % (diff, half)
-            state["align_phase"], state["align_start"], state["observe_start_idx"] = 1, today, i
-    elif align_phase == 1:
-        obs_days = i - state.get("observe_start_idx", i)
-        if fuse_for_reduce:
-            action, exec_amount, note, state["align_phase"] = "不动", 0.0, "熔断：%s——停止减仓" % fuse_hit, 2
-            state["fuse_triggered"] = fuse_hit
-        elif obs_days >= 5:
-            if abs(diff) < 0.5: action, note = "不动", "剩余差额不足0.5成，对齐完成"
-            else: action, exec_amount, note = ("加仓" if diff > 0 else "减仓"), max(-2.0, min(2.0, diff)), "观察期满，执行剩余%.1f成" % exec_amount
-            state["align_phase"] = 2
+            # 新触发强熔断 → 进入 3 日观察期
+            end_date = _date.today() + timedelta(days=3)
+            fuse_state_out = {"tier": fuse_tier, "reason": fuse_reason,
+                              "triggerDate": today, "observeEndDate": end_date.isoformat(),
+                              "observeRemaining": 3, "nearFLine": fuse_fline,
+                              "flineReasons": fline_reasons}
+        # 持久化（写文件前）
+        state["fuse_state"] = {
+            "tier": fuse_tier, "reason": fuse_state_out["reason"],
+            "triggerDate": fuse_state_out["triggerDate"],
+            "observeEndDate": fuse_state_out["observeEndDate"]
+        }
+        # 强熔断 → 立即生效：暂停全部调仓
+        action, exec_amount = "不动", 0.0
+        if fuse_state_out["observeRemaining"] > 0:
+            note = ("【V4.1强熔断】%s 暂停调仓（观察期剩余%d日，%s到期）：%s" %
+                    (fuse_tier, fuse_state_out["observeRemaining"],
+                     fuse_state_out["observeEndDate"], fuse_reason))
         else:
-            action, note = "不动", "观察期第%d/5日" % obs_days
+            note = ("【V4.1强熔断】%s 观察期已满，续期3个交易日：%s" % (fuse_tier, fuse_reason))
+        fuse_hit = note  # 兼容旧字段
+    elif fuse_fline:
+        # 失效红线 → 执行全额（不打折不暂停）
+        fuse_state_out = {"tier": "失效", "reason": "｜".join(fline_reasons),
+                          "nearFLine": True, "flineReasons": fline_reasons,
+                          "observeRemaining": 0, "triggerDate": "", "observeEndDate": ""}
+        state["fuse_state"] = {}  # 解除熔断
+        # 继续走常规 align_phase 决策
+    elif fuse_tier.startswith("弱"):
+        # 弱熔断：5 折（直接对齐，跳过原 5 日观察期）
+        # 保留前次观察期（若还有效）
+        prev_end = prev_fuse.get("observeEndDate", "")
+        if prev_end and prev_end >= today:
+            end_date = _date.fromisoformat(prev_end)
+            remaining = (end_date - _date.today()).days
+            fuse_state_out = {"tier": fuse_tier, "reason": fuse_reason,
+                              "triggerDate": prev_fuse.get("triggerDate", today),
+                              "observeEndDate": prev_end, "observeRemaining": max(0, remaining),
+                              "nearFLine": fuse_fline, "flineReasons": fline_reasons}
+        else:
+            fuse_state_out = {"tier": fuse_tier, "reason": fuse_reason,
+                              "observeRemaining": 0, "triggerDate": today,
+                              "observeEndDate": "", "nearFLine": fuse_fline,
+                              "flineReasons": fline_reasons}
+        state["fuse_state"] = {"tier": fuse_tier, "reason": fuse_reason,
+                                "triggerDate": fuse_state_out["triggerDate"]}
+        # 弱熔断 5 折：差额减半（但上限 2 成）
+        capped = max(-2.0, min(2.0, round(diff * 0.5, 1)))
+        action, exec_amount = ("加仓" if diff > 0 else "减仓"), capped
+        note = ("【V4.1弱熔断】%s 打5折：差额%.1f成→执行%.1f成：%s" %
+                (fuse_tier, abs(diff), abs(exec_amount), fuse_reason))
+        fuse_hit = note
+        # 弱熔断直接对齐完成，不进入 align_phase=1 观察期
+        state["align_phase"] = 2
+        # 继续走常规（这里 action/exec_amount 已确定，但 note 由常规逻辑覆盖）
+        # 跳过原 align_phase 决策
+        skip_align_phase = True
     else:
-        # align_phase == 2: 已完成对齐或首日熔断后
-        # 2026-08-13 修订：若新触发熔断（MA5上穿MA20 / 单日涨≥3% / 综合得分>80）且 diff<0，停止减仓
-        if fuse_for_reduce:
-            action, exec_amount, note = "不动", 0.0, "熔断：%s——停止减仓" % fuse_hit
-            state["fuse_triggered"] = fuse_hit
-        elif abs(diff) < 0.5: action, note = "不动", "差额%.1f成＜0.5成不操作" % abs(diff)
-        elif not (trend_changed or stage_changed or zone_changed): action, note = "不动", "同区间波动不重复调仓"
-        elif in_cooldown: action, note = "不动", "同向冷却期（%s）" % state["last_adjust"]["date"]
+        # 无熔断：清除熔断状态
+        state["fuse_state"] = {}
+        skip_align_phase = False
+
+    # 3) 常规 align_phase 决策（仅在无熔断或失效红线时执行）
+    if fuse_fline:
+        skip_align_phase = False  # 失效红线执行全额，让常规逻辑跑
+    if not skip_align_phase:
+        if align_phase == 0:
+            if abs(diff) < 0.5: action, note, state["align_phase"] = "不动", "差额不足0.5成，直接完成对齐", 2
+            elif abs(diff) <= 2: action, exec_amount, note, state["align_phase"] = ("加仓" if diff > 0 else "减仓"), diff, "差额%.1f成≤2成，首日一次性对齐" % abs(diff), 2
+            else:
+                half = max(-2.0, min(2.0, round(diff / 2, 1)))
+                action, exec_amount = ("加仓" if half > 0 else "减仓"), half
+                note = "首日半额调仓（差额%.1f成→执行%.1f成），5日观察期" % (diff, half)
+                state["align_phase"], state["align_start"], state["observe_start_idx"] = 1, today, i
+        elif align_phase == 1:
+            obs_days = i - state.get("observe_start_idx", i)
+            if obs_days >= 5:
+                if abs(diff) < 0.5: action, note = "不动", "剩余差额不足0.5成，对齐完成"
+                else: action, exec_amount, note = ("加仓" if diff > 0 else "减仓"), max(-2.0, min(2.0, diff)), "观察期满，执行剩余%.1f成" % exec_amount
+                state["align_phase"] = 2
+            else:
+                action, note = "不动", "观察期第%d/5日" % obs_days
         else:
-            action = "加仓" if diff > 0 else "减仓"
-            exec_amount = diff
-            prio = "一级趋势切换" if trend_changed else ("子阶段切换" if stage_changed else "打分档位")
-            note = "%s | %s" % (prio, ("预警触发：%s" % alert_reason) if alert_active else "")
+            # align_phase == 2: 已完成对齐
+            if abs(diff) < 0.5: action, note = "不动", "差额%.1f成＜0.5成不操作" % abs(diff)
+            elif not (trend_changed or stage_changed or zone_changed): action, note = "不动", "同区间波动不重复调仓"
+            elif in_cooldown: action, note = "不动", "同向冷却期（%s）" % state["last_adjust"]["date"]
+            else:
+                action = "加仓" if diff > 0 else "减仓"
+                exec_amount = diff
+                prio = "一级趋势切换" if trend_changed else ("子阶段切换" if stage_changed else "打分档位")
+                note = "%s | %s" % (prio, ("预警触发：%s" % alert_reason) if alert_active else "")
+        # 失效红线时附红字提示
+        if fuse_fline and "【熔断失效】" not in note:
+            note = "[熔断失效 %s] %s" % ("+".join(fline_reasons), note)
 
     # ---------------- 写回状态 ----------------
     # 重要：始终写回元数据（趋势确认日期/理由/对齐阶段），仅在非盘中观察期内执行仓位变更
@@ -1044,6 +1154,8 @@ def main():
         "userAcked": state.get("user_acked", True),  # 2026-08-10 修订：用户是否确认了执行
         "pendingAction": state.get("pending_action"),  # 等待确认的建议
         "alignPhase": state["align_phase"], "fuseHit": fuse_hit,
+        # 2026-08-13 V4.1：完整熔断状态（前端展示当前档位/观察期/失效条件）
+        "fuseState": fuse_state_out,
         "cooldown": in_cooldown, "trendChanged": trend_changed,
         "mapTable": MAP_TABLE, "trendNameMap": TREND_NAME,
     }
